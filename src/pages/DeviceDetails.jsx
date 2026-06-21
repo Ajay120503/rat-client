@@ -103,7 +103,15 @@ export default function DeviceDetails() {
     });
     setSocket(s);
 
+    // device:data fires on basic device-info updates (device:update)
     s.on("device:data", (data) => {
+      if (data.deviceId === deviceId) {
+        fetchDevice();
+      }
+    });
+
+    // device:data:update fires when bulk data OR a command result is saved to device.data
+    s.on("device:data:update", (data) => {
       if (data.deviceId === deviceId) {
         fetchDevice();
       }
@@ -114,10 +122,6 @@ export default function DeviceDetails() {
         setCommands((prev) => [data, ...prev]);
         toast.success(`Command sent: ${data.type}`);
       }
-    });
-
-    s.on(`command:result:${deviceId}`, (data) => {
-      // handled via refresh
     });
 
     return () => s.close();
