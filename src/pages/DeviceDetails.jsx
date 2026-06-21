@@ -68,6 +68,12 @@ const quickActions = [
     color: "cyan",
   },
   {
+    id: "refresh_data",
+    label: "Refresh Data",
+    icon: FiRefreshCw,
+    color: "teal",
+  },
+  {
     id: "exfiltrate_all",
     label: "Exfiltrate All",
     icon: FiDownload,
