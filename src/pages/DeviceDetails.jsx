@@ -1028,79 +1028,168 @@ export default function DeviceDetails() {
 
         {/* ===== PHOTOS ===== */}
         {activeTab === "photos" && (
-          <div className="glass-effect rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">
-                Captured Photos{" "}
-                {((data.capturedPhotos || []).length > 0 || data.lastPhoto) &&
-                  `(${(data.capturedPhotos || []).length})`}
-              </h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => sendCommand("take_photo")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-                >
-                  <FiCamera className="text-sm" /> Take Photo
-                </button>
-                {(data.capturedPhotos || []).length > 0 && (
+          <div className="space-y-6">
+            {/* Captured Photos Section */}
+            <div className="glass-effect rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Captured Photos{" "}
+                  {(data.capturedPhotos || []).length > 0 &&
+                    `(${(data.capturedPhotos || []).length})`}
+                </h3>
+                <div className="flex gap-2">
                   <button
-                    onClick={() => deleteAllMedia("capturedPhotos")}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                    onClick={() => sendCommand("take_photo")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                   >
-                    <FiTrash2 className="text-sm" /> Delete All
+                    <FiCamera className="text-sm" /> Take Photo
                   </button>
-                )}
+                  {(data.capturedPhotos || []).length > 0 && (
+                    <button
+                      onClick={() => deleteAllMedia("capturedPhotos")}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                    >
+                      <FiTrash2 className="text-sm" /> Delete All
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-            {(data.capturedPhotos || []).length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {(data.capturedPhotos || [])
-                  .slice()
-                  .reverse()
-                  .map((photo, i) => (
-                    <div key={photo.publicId || i} className="relative group">
-                      <img
-                        src={photo.url}
-                        alt={`Captured ${i}`}
-                        className="w-full h-48 object-cover rounded-xl cursor-pointer"
-                        onClick={() => setSelectedPhoto(photo.url)}
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            deleteMedia("capturedPhotos", photo.publicId)
-                          }
-                          className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
-                        >
-                          <FiTrash2 className="text-white" />
-                        </button>
-                        <button
-                          onClick={() => window.open(photo.url, "_blank")}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
-                        >
-                          <FiExternalLink className="text-white" />
-                        </button>
+              {(data.capturedPhotos || []).length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {(data.capturedPhotos || [])
+                    .slice()
+                    .reverse()
+                    .map((photo, i) => (
+                      <div key={photo.publicId || i} className="relative group">
+                        <img
+                          src={photo.url}
+                          alt={`Captured ${i}`}
+                          className="w-full h-48 object-cover rounded-xl cursor-pointer"
+                          onClick={() => setSelectedPhoto(photo.url)}
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                          <button
+                            onClick={() =>
+                              deleteMedia("capturedPhotos", photo.publicId)
+                            }
+                            className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
+                          >
+                            <FiTrash2 className="text-white" />
+                          </button>
+                          <button
+                            onClick={() => window.open(photo.url, "_blank")}
+                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
+                          >
+                            <FiExternalLink className="text-white" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-dark-400 mt-1">
+                          {photo.camera && (
+                            <span className="mr-2">📷 {photo.camera}</span>
+                          )}
+                          {photo.timestamp
+                            ? new Date(photo.timestamp).toLocaleString()
+                            : ""}
+                        </p>
                       </div>
-                      <p className="text-xs text-dark-400 mt-1">
-                        {photo.timestamp
-                          ? new Date(photo.timestamp).toLocaleString()
-                          : ""}
-                      </p>
-                    </div>
-                  ))}
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-dark-400">
+                  <FiCamera className="text-3xl mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No captured photos yet</p>
+                </div>
+              )}
+            </div>
+
+            {/* Gallery Photos Section */}
+            <div className="glass-effect rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Gallery Photos{" "}
+                  {(data.photos || []).length > 0 &&
+                    `(${(data.photos || []).length})`}
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => sendCommand("get_photos")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20 transition-all text-sm"
+                  >
+                    <FiRefreshCw className="text-sm" /> Fetch Gallery
+                  </button>
+                  {(data.photos || []).length > 0 && (
+                    <button
+                      onClick={() =>
+                        deleteAllDataType("photos", "Gallery Photos")
+                      }
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                    >
+                      <FiTrash2 className="text-sm" /> Delete All
+                    </button>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-12 text-dark-400">
-                <FiImage className="text-4xl mx-auto mb-3 opacity-50" />
-                <p>No photos captured yet</p>
-                <button
-                  onClick={() => sendCommand("take_photo")}
-                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
-                >
-                  Take a photo now
-                </button>
-              </div>
-            )}
+              {(data.photos || []).length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {(data.photos || [])
+                    .slice()
+                    .reverse()
+                    .map((photo, i) => (
+                      <div
+                        key={photo.publicId || photo.id || i}
+                        className="relative group"
+                      >
+                        <img
+                          src={photo.url}
+                          alt={`Gallery ${i}`}
+                          className="w-full h-48 object-cover rounded-xl cursor-pointer"
+                          onClick={() => setSelectedPhoto(photo.url)}
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-2">
+                          <button
+                            onClick={() =>
+                              deleteDataItem(
+                                "photos",
+                                photo.publicId || photo.id
+                              )
+                            }
+                            className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
+                          >
+                            <FiTrash2 className="text-white" />
+                          </button>
+                          <button
+                            onClick={() => window.open(photo.url, "_blank")}
+                            className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
+                          >
+                            <FiExternalLink className="text-white" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-dark-400 mt-1 truncate">
+                          {photo.name && (
+                            <span className="block truncate">{photo.name}</span>
+                          )}
+                          {photo.size && (
+                            <span className="text-dark-500">
+                              {(photo.size / 1024).toFixed(0)} KB
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-dark-400">
+                  <FiImage className="text-3xl mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No gallery photos uploaded</p>
+                  <button
+                    onClick={() => sendCommand("get_photos")}
+                    className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                  >
+                    Fetch gallery photos now
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Photo viewer modal */}
             {selectedPhoto && (
