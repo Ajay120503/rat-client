@@ -1341,7 +1341,7 @@ export default function DeviceDetails() {
               <button
                 onClick={() => {
                   setActivePhotoBtn("back");
-                  sendCommand("take_photo", { camera: "back" });
+                  sendCommand("take_photo_back");
                 }}
                 className={`p-6 rounded-xl border text-center ${
                   activePhotoBtn === "back"
@@ -1356,7 +1356,7 @@ export default function DeviceDetails() {
               <button
                 onClick={() => {
                   setActivePhotoBtn("front");
-                  sendCommand("take_photo", { camera: "front" });
+                  sendCommand("take_photo_front");
                 }}
                 className={`p-6 rounded-xl border text-center ${
                   activePhotoBtn === "front"
