@@ -142,7 +142,7 @@ export default function DeviceDetails() {
       setDevice(res.data);
       setCommands(res.data.commands?.slice(-50).reverse() || []);
     } catch (err) {
-      toast.error("Failed to fetch device");
+      toast.error("Access denied or device not found");
       navigate("/devices");
     } finally {
       setLoading(false);
