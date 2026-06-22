@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import io from "socket.io-client";
+import toast from "react-hot-toast";
 import {
   FiSmartphone,
   FiSearch,
