@@ -128,28 +128,29 @@ export default function Devices() {
   };
 
   const getAccessBadge = (device) => {
-    if (device.adminId && device.adminId === localStorage.getItem("token")) {
+    const currentToken = localStorage.getItem("token");
+    const adminIdStr = device.adminId ? device.adminId.toString() : "";
+    const isOwner = adminIdStr && adminIdStr === currentToken;
+    const isShared =
+      device.sharedWith &&
+      device.sharedWith.some(
+        (id) => (id ? id.toString() : "") === currentToken
+      );
+    if (isOwner) {
       return (
         <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/20">
           Owner
         </span>
       );
     }
-    if (
-      device.sharedWith &&
-      device.sharedWith.includes(localStorage.getItem("token"))
-    ) {
+    if (isShared) {
       return (
         <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
           Shared
         </span>
       );
     }
-    return (
-      <span className="px-2 py-0.5 rounded-full text-xs bg-dark-600/50 text-dark-400 border border-dark-600/30">
-        No Access
-      </span>
-    );
+    return null;
   };
 
   return (
@@ -202,16 +203,20 @@ export default function Devices() {
           </div>
         ) : (
           filteredDevices.map((device) => {
-            const isOwner = device.adminId === localStorage.getItem("token");
+            const currentToken = localStorage.getItem("token");
+            const adminIdStr = device.adminId ? device.adminId.toString() : "";
+            const isOwner = adminIdStr === currentToken;
             const isShared =
               device.sharedWith &&
-              device.sharedWith.includes(localStorage.getItem("token"));
+              device.sharedWith.some(
+                (id) => (id ? id.toString() : "") === currentToken
+              );
             const hasAccess = isOwner || isShared;
-            const deviceLink = hasAccess ? `/devices/${device.deviceId}` : "#";
 
             return (
-              <div
+              <Link
                 key={device.deviceId}
+                to={`/devices/${device.deviceId}`}
                 className="glass-effect rounded-2xl p-5 card-hover flex items-center justify-between group"
               >
                 <div className="flex items-center gap-5">
@@ -261,7 +266,7 @@ export default function Devices() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {!hasAccess && !isOwner && (
+                  {!hasAccess && (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -272,25 +277,29 @@ export default function Devices() {
                       <FiLock className="text-xs" /> Request Access
                     </button>
                   )}
-                  <div className="text-right text-sm">
-                    <p className="text-dark-400">{device.ip}</p>
-                    <p className="text-dark-500 text-xs mt-0.5">
-                      {device.lastSeen
-                        ? new Date(device.lastSeen).toLocaleString()
-                        : "Never"}
-                    </p>
-                  </div>
-                  <div
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                      device.status === "online"
-                        ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                        : "bg-dark-600/50 text-dark-400 border border-dark-600/30"
-                    }`}
-                  >
-                    {device.status}
-                  </div>
+                  {hasAccess && (
+                    <div className="text-right text-sm">
+                      <p className="text-dark-400">{device.ip}</p>
+                      <p className="text-dark-500 text-xs mt-0.5">
+                        {device.lastSeen
+                          ? new Date(device.lastSeen).toLocaleString()
+                          : "Never"}
+                      </p>
+                    </div>
+                  )}
+                  {hasAccess && (
+                    <div
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                        device.status === "online"
+                          ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                          : "bg-dark-600/50 text-dark-400 border border-dark-600/30"
+                      }`}
+                    >
+                      {device.status}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </Link>
             );
           })
         )}

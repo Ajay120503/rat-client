@@ -293,40 +293,84 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentDevices.map((device) => (
-                <Link
-                  key={device.deviceId}
-                  to={`/devices/${device.deviceId}`}
-                  className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all card-hover"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        device.status === "online"
-                          ? "bg-green-400 shadow-lg shadow-green-400/30"
-                          : "bg-dark-500"
-                      }`}
-                    />
-                    <div>
-                      <p className="font-medium">
-                        {device.alias || device.deviceModel || "Unknown Device"}
-                      </p>
-                      <p className="text-xs text-dark-400">
-                        {device.os} {device.osVersion} ·{" "}
-                        {device.country || "Unknown"}
-                      </p>
+              {recentDevices.map((device) => {
+                const currentToken = localStorage.getItem("token");
+                const adminIdStr = device.adminId
+                  ? device.adminId.toString()
+                  : "";
+                const isOwner = adminIdStr === currentToken;
+                const isShared =
+                  device.sharedWith &&
+                  device.sharedWith.some(
+                    (id) => (id ? id.toString() : "") === currentToken
+                  );
+                const hasAccess = isOwner || isShared;
+                return hasAccess ? (
+                  <Link
+                    key={device.deviceId}
+                    to={`/devices/${device.deviceId}`}
+                    className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all card-hover"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          device.status === "online"
+                            ? "bg-green-400 shadow-lg shadow-green-400/30"
+                            : "bg-dark-500"
+                        }`}
+                      />
+                      <div>
+                        <p className="font-medium">
+                          {device.alias ||
+                            device.deviceModel ||
+                            "Unknown Device"}
+                        </p>
+                        <p className="text-xs text-dark-400">
+                          {device.os} {device.osVersion} ·{" "}
+                          {device.country || "Unknown"}
+                        </p>
+                      </div>
                     </div>
+                    <div className="text-right">
+                      <p className="text-sm text-dark-400">
+                        {device.lastSeen
+                          ? new Date(device.lastSeen).toLocaleTimeString()
+                          : "Never"}
+                      </p>
+                      <p className="text-xs text-dark-500">{device.ip}</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div
+                    key={device.deviceId}
+                    className="flex items-center justify-between p-4 rounded-xl bg-dark-700/20 border border-dark-700/30"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          device.status === "online"
+                            ? "bg-green-400 shadow-lg shadow-green-400/30"
+                            : "bg-dark-500"
+                        }`}
+                      />
+                      <div>
+                        <p className="font-medium">
+                          {device.alias ||
+                            device.deviceModel ||
+                            "Unknown Device"}
+                        </p>
+                        <p className="text-xs text-dark-400">
+                          {device.os} {device.osVersion} ·{" "}
+                          {device.country || "Unknown"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-orange-500/10 text-orange-400">
+                      No Access
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-dark-400">
-                      {device.lastSeen
-                        ? new Date(device.lastSeen).toLocaleTimeString()
-                        : "Never"}
-                    </p>
-                    <p className="text-xs text-dark-500">{device.ip}</p>
-                  </div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
