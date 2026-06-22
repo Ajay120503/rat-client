@@ -21,8 +21,14 @@ import {
   FiCheckCircle,
 } from "react-icons/fi";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:5000";
+const API =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
+const WS_URL =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -127,31 +133,8 @@ export default function Devices() {
     return "text-red-400";
   };
 
-  const getAccessBadge = (device) => {
-    const currentToken = localStorage.getItem("token");
-    const adminIdStr = device.adminId ? device.adminId.toString() : "";
-    const isOwner = adminIdStr && adminIdStr === currentToken;
-    const isShared =
-      device.sharedWith &&
-      device.sharedWith.some(
-        (id) => (id ? id.toString() : "") === currentToken
-      );
-    if (isOwner) {
-      return (
-        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/20">
-          Owner
-        </span>
-      );
-    }
-    if (isShared) {
-      return (
-        <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
-          Approved
-        </span>
-      );
-    }
-    return null;
-  };
+  // Backend already filters by access; everything here is visible to the user
+  const getAccessBadge = () => null;
 
   return (
     <div className="space-y-8">
@@ -203,17 +186,8 @@ export default function Devices() {
           </div>
         ) : (
           filteredDevices.map((device) => {
-            const currentToken = localStorage.getItem("token");
-            const adminIdStr = device.adminId ? device.adminId.toString() : "";
-            const isOwner = adminIdStr === currentToken;
-            const isShared =
-              device.sharedWith &&
-              device.sharedWith.some(
-                (id) => (id ? id.toString() : "") === currentToken
-              );
-            const hasAccess = isOwner || isShared;
-
-            return hasAccess ? (
+            // Backend guarantees access; no need to re-check here
+            return (
               <Link
                 key={device.deviceId}
                 to={`/devices/${device.deviceId}`}
@@ -285,55 +259,6 @@ export default function Devices() {
                   </div>
                 </div>
               </Link>
-            ) : (
-              <div
-                key={device.deviceId}
-                className="glass-effect rounded-2xl p-5 card-hover flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="relative">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        device.status === "online"
-                          ? "bg-green-400 shadow-lg shadow-green-400/30"
-                          : "bg-dark-500"
-                      }`}
-                    />
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
-                    <FiSmartphone className="text-primary-400 text-xl" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-lg">
-                        {device.alias || device.deviceModel || "Unknown Device"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-dark-400">
-                      <span>
-                        {device.os} {device.osVersion}
-                      </span>
-                      <span>·</span>
-                      <span className="flex items-center gap-1">
-                        <FiGlobe className="text-xs" />
-                        {device.country || "Unknown"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      requestAccess(device.deviceId);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 text-sm"
-                  >
-                    <FiLock className="text-xs" /> Request Access
-                  </button>
-                </div>
-              </div>
             );
           })
         )}

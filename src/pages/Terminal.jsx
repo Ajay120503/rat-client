@@ -10,8 +10,14 @@ import {
 import toast from "react-hot-toast";
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:5000";
+const API =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
+const WS_URL =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
 
 export default function Terminal() {
   const [socket, setSocket] = useState(null);

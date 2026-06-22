@@ -10,7 +10,10 @@ import {
   FiClock,
 } from "react-icons/fi";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
 
 export default function AccessRequests() {
   const [requests, setRequests] = useState([]);
