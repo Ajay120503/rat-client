@@ -16,6 +16,9 @@ import {
   FiUserPlus,
   FiX,
   FiRefreshCw,
+  FiBell,
+  FiLock,
+  FiCheckCircle,
 } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -25,9 +28,16 @@ export default function Devices() {
   const [devices, setDevices] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [availableDevices, setAvailableDevices] = useState([]);
+  const [loadingClaim, setLoadingClaim] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [currentUserRole, setCurrentUserRole] = useState("user");
+  const [pendingAccessList, setPendingAccessList] = useState([]);
 
   useEffect(() => {
     fetchDevices();
+    fetchPendingRequests();
 
     const socket = io(WS_URL, {
       auth: { token: localStorage.getItem("token") },
@@ -36,13 +46,10 @@ export default function Devices() {
     socket.on("device:online", () => fetchDevices());
     socket.on("device:offline", () => fetchDevices());
     socket.on("device:data", () => fetchDevices());
+    socket.on("access:request", () => fetchPendingRequests());
 
     return () => socket.close();
   }, []);
-
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [availableDevices, setAvailableDevices] = useState([]);
-  const [loadingClaim, setLoadingClaim] = useState(false);
 
   const fetchDevices = async () => {
     try {
@@ -56,11 +63,23 @@ export default function Devices() {
     }
   };
 
+  const fetchPendingRequests = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/api/access-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPendingRequests(res.data.length);
+      setPendingAccessList(res.data);
+    } catch (err) {
+      // silently ignore if endpoint not available
+    }
+  };
+
   const fetchAvailableDevices = async () => {
     setLoadingClaim(true);
     try {
       const token = localStorage.getItem("token");
-      // Get ALL devices including unassigned ones
       const res = await axios.get(`${API}/api/devices/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -90,6 +109,56 @@ export default function Devices() {
     }
   };
 
+  const requestAccess = async (deviceId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API}/api/devices/${deviceId}/request-access`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Access request sent to device owner");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to request access");
+    }
+  };
+
+  const approveRequest = async (requestId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${API}/api/access-requests/${requestId}`,
+        { action: "approve" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Access request approved");
+      fetchPendingRequests();
+    } catch (err) {
+      toast.error("Failed to approve request");
+    }
+  };
+
+  const rejectRequest = async (requestId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${API}/api/access-requests/${requestId}`,
+        { action: "reject" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Access request rejected");
+      fetchPendingRequests();
+    } catch (err) {
+      toast.error("Failed to reject request");
+    }
+  };
+
   const filteredDevices = devices.filter((device) => {
     const matchesSearch =
       device.deviceModel?.toLowerCase().includes(search.toLowerCase()) ||
@@ -110,6 +179,31 @@ export default function Devices() {
     return "text-red-400";
   };
 
+  const getAccessBadge = (device) => {
+    if (device.adminId && device.adminId === localStorage.getItem("token")) {
+      return (
+        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400 border border-green-500/20">
+          Owner
+        </span>
+      );
+    }
+    if (
+      device.sharedWith &&
+      device.sharedWith.includes(localStorage.getItem("token"))
+    ) {
+      return (
+        <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          Shared
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs bg-dark-600/50 text-dark-400 border border-dark-600/30">
+        No Access
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -118,6 +212,13 @@ export default function Devices() {
           <p className="text-dark-400 mt-1">{devices.length} total device(s)</p>
         </div>
         <div className="flex items-center gap-3">
+          {pendingRequests > 0 && (
+            <div className="relative">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-all text-sm">
+                <FiBell className="text-sm" /> Requests ({pendingRequests})
+              </button>
+            </div>
+          )}
           <button
             onClick={() => {
               setShowClaimModal(true);
@@ -149,6 +250,53 @@ export default function Devices() {
         </div>
       </div>
 
+      {/* Pending Requests Section */}
+      {pendingAccessList.length > 0 && (
+        <div className="glass-effect rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <FiBell className="text-orange-400" /> Pending Access Requests
+          </h3>
+          <div className="space-y-3">
+            {pendingAccessList.map((req) => (
+              <div
+                key={req._id}
+                className="p-4 rounded-xl bg-dark-700/30 border border-dark-600/50 flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-medium">
+                    {req.requesterUsername} wants access to {req.deviceModel}
+                  </p>
+                  {req.message && (
+                    <p className="text-sm text-dark-400 mt-1">
+                      "{req.message}"
+                    </p>
+                  )}
+                  <p className="text-xs text-dark-500 mt-1">
+                    {new Date(req.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => approveRequest(req._id)}
+                    className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                    title="Approve"
+                  >
+                    <FiCheckCircle />
+                  </button>
+                  <button
+                    onClick={() => rejectRequest(req._id)}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                    title="Reject"
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {filteredDevices.length === 0 ? (
           <div className="glass-effect rounded-2xl p-12 text-center">
@@ -159,76 +307,98 @@ export default function Devices() {
             </p>
           </div>
         ) : (
-          filteredDevices.map((device) => (
-            <Link
-              key={device.deviceId}
-              to={`/devices/${device.deviceId}`}
-              className="glass-effect rounded-2xl p-5 card-hover flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-5">
-                <div className="relative">
+          filteredDevices.map((device) => {
+            const isOwner = device.adminId === localStorage.getItem("token");
+            const isShared =
+              device.sharedWith &&
+              device.sharedWith.includes(localStorage.getItem("token"));
+            const hasAccess = isOwner || isShared;
+            const deviceLink = hasAccess ? `/devices/${device.deviceId}` : "#";
+
+            return (
+              <div
+                key={device.deviceId}
+                className="glass-effect rounded-2xl p-5 card-hover flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        device.status === "online"
+                          ? "bg-green-400 shadow-lg shadow-green-400/30"
+                          : "bg-dark-500"
+                      }`}
+                    />
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
+                    <FiSmartphone className="text-primary-400 text-xl" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-lg">
+                        {device.alias || device.deviceModel || "Unknown Device"}
+                      </p>
+                      {getAccessBadge(device)}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-dark-400">
+                      <span>
+                        {device.os} {device.osVersion}
+                      </span>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <FiGlobe className="text-xs" />
+                        {device.country || "Unknown"}
+                      </span>
+                      {device.batteryLevel && (
+                        <>
+                          <span>·</span>
+                          <span
+                            className={`flex items-center gap-1 ${getBatteryColor(
+                              device.batteryLevel
+                            )}`}
+                          >
+                            <FiBattery className="text-xs" />
+                            {device.batteryLevel}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {!hasAccess && !isOwner && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        requestAccess(device.deviceId);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 text-sm"
+                    >
+                      <FiLock className="text-xs" /> Request Access
+                    </button>
+                  )}
+                  <div className="text-right text-sm">
+                    <p className="text-dark-400">{device.ip}</p>
+                    <p className="text-dark-500 text-xs mt-0.5">
+                      {device.lastSeen
+                        ? new Date(device.lastSeen).toLocaleString()
+                        : "Never"}
+                    </p>
+                  </div>
                   <div
-                    className={`w-3 h-3 rounded-full ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                       device.status === "online"
-                        ? "bg-green-400 shadow-lg shadow-green-400/30"
-                        : "bg-dark-500"
+                        ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                        : "bg-dark-600/50 text-dark-400 border border-dark-600/30"
                     }`}
-                  />
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500/20 to-purple-500/20 flex items-center justify-center">
-                  <FiSmartphone className="text-primary-400 text-xl" />
-                </div>
-                <div>
-                  <p className="font-semibold text-lg">
-                    {device.alias || device.deviceModel || "Unknown Device"}
-                  </p>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-dark-400">
-                    <span>
-                      {device.os} {device.osVersion}
-                    </span>
-                    <span>·</span>
-                    <span className="flex items-center gap-1">
-                      <FiGlobe className="text-xs" />
-                      {device.country || "Unknown"}
-                    </span>
-                    {device.batteryLevel && (
-                      <>
-                        <span>·</span>
-                        <span
-                          className={`flex items-center gap-1 ${getBatteryColor(
-                            device.batteryLevel
-                          )}`}
-                        >
-                          <FiBattery className="text-xs" />
-                          {device.batteryLevel}%
-                        </span>
-                      </>
-                    )}
+                  >
+                    {device.status}
                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-6">
-                <div className="text-right text-sm">
-                  <p className="text-dark-400">{device.ip}</p>
-                  <p className="text-dark-500 text-xs mt-0.5">
-                    {device.lastSeen
-                      ? new Date(device.lastSeen).toLocaleString()
-                      : "Never"}
-                  </p>
-                </div>
-                <div
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                    device.status === "online"
-                      ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                      : "bg-dark-600/50 text-dark-400 border border-dark-600/30"
-                  }`}
-                >
-                  {device.status}
-                </div>
-              </div>
-            </Link>
-          ))
+            );
+          })
         )}
       </div>
 
