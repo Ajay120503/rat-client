@@ -30,6 +30,10 @@ import {
 } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const DEFAULT_SERVER_URL =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:5000";
 
 // Helper to get auth headers
 const authHeaders = () => ({
@@ -111,8 +115,8 @@ export default function ApkBuilder() {
     name: "System Update",
     packageName: "com.android.system.update",
     version: "1.0.0",
-    serverUrl: API,
-    wsUrl: API,
+    serverUrl: DEFAULT_SERVER_URL,
+    wsUrl: DEFAULT_SERVER_URL,
     icon: "update_icon.png",
     iconFile: null,
     hideAfterInstall: true,
