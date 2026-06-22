@@ -120,7 +120,7 @@ export default function ApkBuilder() {
     icon: "update_icon.png",
     iconFile: null,
     hideAfterInstall: true,
-    hideLauncher: true,
+    hideLauncher: false,
     persistence: true,
     bindWithApk: null,
     permissions: {
