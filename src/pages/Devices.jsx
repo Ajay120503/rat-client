@@ -31,13 +31,9 @@ export default function Devices() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [availableDevices, setAvailableDevices] = useState([]);
   const [loadingClaim, setLoadingClaim] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState(0);
-  const [currentUserRole, setCurrentUserRole] = useState("user");
-  const [pendingAccessList, setPendingAccessList] = useState([]);
 
   useEffect(() => {
     fetchDevices();
-    fetchPendingRequests();
 
     const socket = io(WS_URL, {
       auth: { token: localStorage.getItem("token") },
@@ -46,7 +42,6 @@ export default function Devices() {
     socket.on("device:online", () => fetchDevices());
     socket.on("device:offline", () => fetchDevices());
     socket.on("device:data", () => fetchDevices());
-    socket.on("access:request", () => fetchPendingRequests());
 
     return () => socket.close();
   }, []);
@@ -60,19 +55,6 @@ export default function Devices() {
       setDevices(res.data);
     } catch (err) {
       toast.error("Failed to fetch devices");
-    }
-  };
-
-  const fetchPendingRequests = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${API}/api/access-requests`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPendingRequests(res.data.length);
-      setPendingAccessList(res.data);
-    } catch (err) {
-      // silently ignore if endpoint not available
     }
   };
 
@@ -122,40 +104,6 @@ export default function Devices() {
       toast.success("Access request sent to device owner");
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to request access");
-    }
-  };
-
-  const approveRequest = async (requestId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${API}/api/access-requests/${requestId}`,
-        { action: "approve" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      toast.success("Access request approved");
-      fetchPendingRequests();
-    } catch (err) {
-      toast.error("Failed to approve request");
-    }
-  };
-
-  const rejectRequest = async (requestId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${API}/api/access-requests/${requestId}`,
-        { action: "reject" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      toast.success("Access request rejected");
-      fetchPendingRequests();
-    } catch (err) {
-      toast.error("Failed to reject request");
     }
   };
 
@@ -212,13 +160,6 @@ export default function Devices() {
           <p className="text-dark-400 mt-1">{devices.length} total device(s)</p>
         </div>
         <div className="flex items-center gap-3">
-          {pendingRequests > 0 && (
-            <div className="relative">
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-all text-sm">
-                <FiBell className="text-sm" /> Requests ({pendingRequests})
-              </button>
-            </div>
-          )}
           <button
             onClick={() => {
               setShowClaimModal(true);
@@ -249,53 +190,6 @@ export default function Devices() {
           </select>
         </div>
       </div>
-
-      {/* Pending Requests Section */}
-      {pendingAccessList.length > 0 && (
-        <div className="glass-effect rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <FiBell className="text-orange-400" /> Pending Access Requests
-          </h3>
-          <div className="space-y-3">
-            {pendingAccessList.map((req) => (
-              <div
-                key={req._id}
-                className="p-4 rounded-xl bg-dark-700/30 border border-dark-600/50 flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium">
-                    {req.requesterUsername} wants access to {req.deviceModel}
-                  </p>
-                  {req.message && (
-                    <p className="text-sm text-dark-400 mt-1">
-                      "{req.message}"
-                    </p>
-                  )}
-                  <p className="text-xs text-dark-500 mt-1">
-                    {new Date(req.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => approveRequest(req._id)}
-                    className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                    title="Approve"
-                  >
-                    <FiCheckCircle />
-                  </button>
-                  <button
-                    onClick={() => rejectRequest(req._id)}
-                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                    title="Reject"
-                  >
-                    <FiX />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-4">
         {filteredDevices.length === 0 ? (

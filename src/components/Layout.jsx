@@ -10,6 +10,7 @@ import {
   FiMenu,
   FiX,
   FiShield,
+  FiBell,
 } from "react-icons/fi";
 
 const navItems = [
@@ -36,16 +37,25 @@ const navItems = [
     icon: FiTerminal,
     label: "Terminal",
     color: "from-orange-400 to-orange-600",
+    adminOnly: true,
+  },
+  {
+    path: "/access-requests",
+    icon: FiBell,
+    label: "Access Requests",
+    color: "from-red-400 to-red-600",
+    adminOnly: true,
   },
   {
     path: "/settings",
     icon: FiSettings,
     label: "Settings",
     color: "from-gray-400 to-gray-600",
+    adminOnly: true,
   },
 ];
 
-export default function Layout({ children, onLogout }) {
+export default function Layout({ children, onLogout, isAdmin = false }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -71,18 +81,20 @@ export default function Layout({ children, onLogout }) {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== "/" && location.pathname.startsWith(item.path));
+          {navItems
+            .filter((item) => !item.adminOnly || isAdmin)
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== "/" && location.pathname.startsWith(item.path));
 
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                   ${
                     isActive
@@ -90,9 +102,9 @@ export default function Layout({ children, onLogout }) {
                       : "text-dark-300 hover:bg-dark-700/50 hover:text-white border border-transparent"
                   }
                 `}
-              >
-                <div
-                  className={`
+                >
+                  <div
+                    className={`
                   w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200
                   ${
                     isActive
@@ -100,22 +112,22 @@ export default function Layout({ children, onLogout }) {
                       : "bg-dark-700 group-hover:bg-dark-600"
                   }
                 `}
-                >
-                  <Icon
-                    className={`text-sm ${
-                      isActive
-                        ? "text-white"
-                        : "text-dark-400 group-hover:text-white"
-                    }`}
-                  />
-                </div>
-                <span className="font-medium">{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-400 glow-animation" />
-                )}
-              </NavLink>
-            );
-          })}
+                  >
+                    <Icon
+                      className={`text-sm ${
+                        isActive
+                          ? "text-white"
+                          : "text-dark-400 group-hover:text-white"
+                      }`}
+                    />
+                  </div>
+                  <span className="font-medium">{item.label}</span>
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-400 glow-animation" />
+                  )}
+                </NavLink>
+              );
+            })}
         </nav>
 
         <div className="px-4 py-4 border-t border-dark-700/50">

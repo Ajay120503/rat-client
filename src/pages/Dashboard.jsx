@@ -100,16 +100,14 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const [statsRes, devicesRes] = await Promise.all([
-        axios.get(`${API}/api/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${API}/api/devices`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      setStats(statsRes.data);
+      const devicesRes = await axios.get(`${API}/api/devices`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setRecentDevices(devicesRes.data.slice(0, 5));
+      setStats({
+        total: devicesRes.data.length,
+        online: devicesRes.data.filter((d) => d.status === "online").length,
+      });
     } catch (err) {
       console.error("Failed to fetch data:", err);
     }
@@ -153,16 +151,11 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((card, index) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {statsCards.slice(0, 2).map((card, index) => {
           const Icon = card.icon;
           const value = stats
-            ? [
-                stats.totalDevices,
-                stats.onlineDevices,
-                stats.todayNew,
-                stats.totalCommands,
-              ][index]
+            ? [stats.total || 0, stats.online || 0][index]
             : "...";
 
           return (
