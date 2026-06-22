@@ -154,7 +154,7 @@ export default function Layout({ children, onLogout, isAdmin = false }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-dark-800/95 backdrop-blur-xl border-b border-dark-700/50">
+        <header className="lg:hidden flex items-center h-screen justify-between px-4 py-3 bg-dark-800/95 backdrop-blur-xl border-b border-dark-700/50">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-dark-700 transition-colors"
