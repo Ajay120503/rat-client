@@ -31,9 +31,7 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const DEFAULT_SERVER_URL =
-  typeof window !== "undefined"
-    ? window.location.origin
-    : "http://localhost:5000";
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // Helper to get auth headers
 const authHeaders = () => ({
