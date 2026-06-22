@@ -459,42 +459,127 @@ export default function DeviceDetails() {
             </div>
 
             <div className="lg:col-span-3 glass-effect rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4">Recent Commands</h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4">
+                Recent Commands
+                {commands.filter((c) => c.status === "failed").length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs">
+                    {commands.filter((c) => c.status === "failed").length}{" "}
+                    failed
+                  </span>
+                )}
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {commands.length === 0 ? (
                   <p className="text-dark-400 text-center py-8">
                     No commands executed yet
                   </p>
                 ) : (
-                  commands.map((cmd, i) => (
-                    <div
-                      key={cmd.commandId || i}
-                      className="flex items-center justify-between p-3 rounded-xl bg-dark-700/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            cmd.status === "executed"
-                              ? "bg-green-400"
-                              : cmd.status === "failed"
-                              ? "bg-red-400"
-                              : cmd.status === "pending"
-                              ? "bg-yellow-400"
-                              : "bg-dark-500"
+                  commands.map((cmd, i) => {
+                    const hasError =
+                      cmd.status === "failed" &&
+                      cmd.result &&
+                      (cmd.result.error || cmd.result.errorType);
+                    return (
+                      <div key={cmd.commandId || i}>
+                        <div
+                          className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                            hasError
+                              ? "bg-red-900/20 border border-red-500/20 hover:bg-red-900/30"
+                              : "bg-dark-700/30 hover:bg-dark-700/50"
                           }`}
-                        />
-                        <span className="text-sm font-medium">{cmd.type}</span>
-                        <span className="text-xs text-dark-400">
-                          {cmd.createdAt
-                            ? new Date(cmd.createdAt).toLocaleTimeString()
-                            : ""}
-                        </span>
+                          onClick={() => {
+                            if (hasError) {
+                              const el = document.getElementById(
+                                `cmd-error-${cmd.commandId || i}`
+                              );
+                              if (el) el.classList.toggle("hidden");
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span
+                              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                cmd.status === "executed"
+                                  ? "bg-green-400"
+                                  : cmd.status === "failed"
+                                  ? "bg-red-400"
+                                  : cmd.status === "pending"
+                                  ? "bg-yellow-400"
+                                  : "bg-dark-500"
+                              }`}
+                            />
+                            <span className="text-sm font-medium truncate">
+                              {cmd.type}
+                            </span>
+                            <span className="text-xs text-dark-400 flex-shrink-0">
+                              {cmd.createdAt
+                                ? new Date(cmd.createdAt).toLocaleTimeString()
+                                : ""}
+                            </span>
+                            {hasError && (
+                              <span className="text-xs text-red-400 ml-2 flex-shrink-0">
+                                {cmd.result.errorType || "Error"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {cmd.result?.error && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(cmd.result.error);
+                                }}
+                                className="p-1 rounded hover:bg-dark-600/50 text-dark-400"
+                                title="Copy error"
+                              >
+                                <FiCopy className="text-xs" />
+                              </button>
+                            )}
+                            <span
+                              className={`text-xs ${
+                                cmd.status === "failed"
+                                  ? "text-red-400"
+                                  : "text-dark-400"
+                              }`}
+                            >
+                              {cmd.status}
+                            </span>
+                          </div>
+                        </div>
+                        {hasError && (
+                          <div
+                            id={`cmd-error-${cmd.commandId || i}`}
+                            className="hidden mt-1 mb-2 ml-5 p-3 rounded-lg bg-red-950/40 border border-red-500/10"
+                          >
+                            <p className="text-xs text-red-300 font-mono whitespace-pre-wrap break-all">
+                              <span className="text-red-400 font-bold">
+                                Error:
+                              </span>{" "}
+                              {cmd.result.error}
+                            </p>
+                            {cmd.result.errorType && (
+                              <p className="text-xs text-red-400/80 font-mono mt-1">
+                                <span className="text-red-400 font-bold">
+                                  Type:
+                                </span>{" "}
+                                {cmd.result.errorType}
+                              </p>
+                            )}
+                            {cmd.result.stackTrace && (
+                              <details className="mt-1">
+                                <summary className="text-xs text-red-400/60 cursor-pointer hover:text-red-400">
+                                  Stack trace
+                                </summary>
+                                <pre className="text-xs text-red-300/60 font-mono mt-1 whitespace-pre-wrap">
+                                  {cmd.result.stackTrace}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs text-dark-400">
-                        {cmd.status}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
