@@ -191,8 +191,9 @@ export default function DeviceDetails() {
   const deleteMedia = async (type, publicId) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API}/api/media/${deviceId}/${type}/${publicId}`, {
+      await axios.delete(`${API}/api/media/${deviceId}/${type}`, {
         headers: { Authorization: `Bearer ${token}` },
+        data: { publicId },
       });
       toast.success("Deleted from Cloudinary");
       fetchDevice();
