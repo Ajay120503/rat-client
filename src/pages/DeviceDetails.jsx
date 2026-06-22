@@ -1116,34 +1116,86 @@ export default function DeviceDetails() {
                 Videos{" "}
                 {(data.videos || []).length > 0 && `(${data.videos.length})`}
               </h3>
-              <button
-                onClick={() => sendCommand("get_videos")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-              >
-                <FiRefreshCw className="text-sm" /> Refresh
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => sendCommand("get_videos")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 text-sm"
+                >
+                  <FiRefreshCw className="text-sm" /> Refresh
+                </button>
+                {(data.videos || []).length > 0 && (
+                  <button
+                    onClick={() => deleteAllDataType("videos", "Videos")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 text-sm"
+                  >
+                    <FiTrash2 className="text-sm" /> Delete All
+                  </button>
+                )}
+              </div>
             </div>
             {(data.videos || []).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(data.videos || []).map((video, i) => (
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {(data.videos || []).map((v, i) => (
                   <div
-                    key={video.id || i}
-                    className="p-3 rounded-xl bg-dark-700/30"
+                    key={v.id || i}
+                    className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
                   >
-                    <div className="flex items-center gap-3 mb-2">
-                      <FiVideo className="text-primary-400" />
-                      <p className="text-sm font-medium truncate">
-                        {video.name}
-                      </p>
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                        <FiVideo className="text-purple-400 text-2xl" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">
+                          {v.name || "Unknown Video"}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          <span className="text-xs text-dark-400">
+                            {v.size
+                              ? `${(v.size / 1024 / 1024).toFixed(1)} MB`
+                              : "Unknown size"}
+                          </span>
+                          <span className="text-xs text-dark-400">
+                            {v.date
+                              ? new Date(v.date).toLocaleDateString()
+                              : ""}
+                          </span>
+                          {v.mimeType && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-600/50 text-dark-400">
+                              {v.mimeType.split("/")[1] || v.mimeType}
+                            </span>
+                          )}
+                          {v.path && (
+                            <span
+                              className="text-xs text-dark-500 truncate max-w-[120px]"
+                              title={v.path}
+                            >
+                              {v.path}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-dark-400">
-                      {video.size
-                        ? `${(video.size / 1024 / 1024).toFixed(1)} MB`
-                        : ""}
-                      {video.date
-                        ? ` · ${new Date(video.date).toLocaleDateString()}`
-                        : ""}
-                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      <button
+                        onClick={() => {
+                          copyToClipboard(v.id?.toString() || "");
+                          toast.success("Video ID copied");
+                        }}
+                        className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                        title="Copy video ID"
+                      >
+                        <FiCopy className="text-sm" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          deleteDataItem("videos", v.id || v.publicId)
+                        }
+                        className="p-2 rounded-lg hover:bg-red-500/20 text-red-400"
+                        title="Delete video"
+                      >
+                        <FiTrash2 className="text-sm" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1151,6 +1203,10 @@ export default function DeviceDetails() {
               <div className="text-center py-12 text-dark-400">
                 <FiVideo className="text-4xl mx-auto mb-3 opacity-50" />
                 <p>No video data available</p>
+                <p className="text-xs mt-2 text-dark-500">
+                  Use the terminal command{" "}
+                  <code className="text-primary-400">get_videos</code> to fetch
+                </p>
                 <button
                   onClick={() => sendCommand("get_videos")}
                   className="mt-4 text-sm text-primary-400 hover:text-primary-300"
