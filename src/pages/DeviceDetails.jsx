@@ -1218,21 +1218,19 @@ export default function DeviceDetails() {
         {activeTab === "camera" && (
           <div className="glass-effect rounded-2xl p-6">
             <h3 className="text-lg font-semibold mb-4">Camera Controls</h3>
-
-            {/* Last captured photo */}
             {data.lastPhoto && (
               <div className="mb-6">
                 <p className="text-sm text-dark-400 mb-2">Last Captured:</p>
                 <div className="relative w-full max-w-lg">
                   <img
                     src={data.lastPhoto.url}
-                    alt="Last captured"
+                    alt="Last"
                     className="w-full h-64 object-cover rounded-xl"
                   />
                   <div className="absolute top-2 right-2 flex gap-2">
                     <button
                       onClick={() => window.open(data.lastPhoto.url, "_blank")}
-                      className="p-2 bg-dark-700/80 rounded-lg hover:bg-dark-700 transition-all"
+                      className="p-2 bg-dark-700/80 rounded-lg hover:bg-dark-700"
                     >
                       <FiExternalLink className="text-white text-sm" />
                     </button>
@@ -1240,37 +1238,56 @@ export default function DeviceDetails() {
                       onClick={() =>
                         deleteMedia("capturedPhotos", data.lastPhoto.publicId)
                       }
-                      className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500 transition-all"
+                      className="p-2 bg-red-500/80 rounded-lg hover:bg-red-500"
                     >
                       <FiTrash2 className="text-white text-sm" />
                     </button>
                   </div>
+                  <p className="text-xs text-dark-400 mt-2">
+                    Camera: {data.lastPhoto.camera || "back"} ·{" "}
+                    {data.lastPhoto.timestamp
+                      ? new Date(data.lastPhoto.timestamp).toLocaleString()
+                      : ""}
+                  </p>
                 </div>
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <button
-                onClick={() => sendCommand("take_photo")}
-                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
+                onClick={() => sendCommand("take_photo", { camera: "back" })}
+                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
               >
-                <FiCamera className="text-4xl mx-auto mb-3 text-primary-400" />
-                <p className="font-medium">Take Photo</p>
-                <p className="text-xs text-dark-400 mt-1">
-                  Capture from camera
-                </p>
+                <FiCamera className="text-3xl mx-auto mb-2 text-primary-400" />
+                <p className="font-medium text-sm">Back</p>
+                <p className="text-xs text-dark-400 mt-1">Take photo</p>
+              </button>
+              <button
+                onClick={() => sendCommand("take_photo", { front: true })}
+                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
+              >
+                <FiCamera className="text-3xl mx-auto mb-2 text-purple-400" />
+                <p className="font-medium text-sm">Front</p>
+                <p className="text-xs text-dark-400 mt-1">Take selfie</p>
               </button>
               <button
                 onClick={() => sendCommand("record_audio", { action: "start" })}
-                className="p-8 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 transition-all card-hover text-center"
+                className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-primary-500/30 text-center"
               >
-                <FiMic className="text-4xl mx-auto mb-3 text-primary-400" />
-                <p className="font-medium">Record Audio</p>
-                <p className="text-xs text-dark-400 mt-1">
-                  Start microphone recording
-                </p>
+                <FiMic className="text-3xl mx-auto mb-2 text-orange-400" />
+                <p className="font-medium text-sm">Record</p>
+                <p className="text-xs text-dark-400 mt-1">Start recording</p>
               </button>
             </div>
+            {data.recordedAudio && (
+              <div className="mt-6 p-4 rounded-xl bg-dark-700/30">
+                <p className="text-sm font-medium mb-2">Last Recording:</p>
+                <audio
+                  src={data.recordedAudio.url}
+                  controls
+                  className="w-full"
+                />
+              </div>
+            )}
           </div>
         )}
 
