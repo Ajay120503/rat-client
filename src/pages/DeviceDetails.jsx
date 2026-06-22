@@ -1177,16 +1177,32 @@ export default function DeviceDetails() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      <button
-                        onClick={() => {
-                          copyToClipboard(v.id?.toString() || "");
-                          toast.success("Video ID copied");
-                        }}
-                        className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
-                        title="Copy video ID"
-                      >
-                        <FiCopy className="text-sm" />
-                      </button>
+                      {v.cloudinaryUrl ? (
+                        <a
+                          href={v.cloudinaryUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                          title="Download video"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.success("Downloading video...");
+                          }}
+                        >
+                          <FiDownload className="text-sm" />
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            copyToClipboard(v.id?.toString() || "");
+                            toast.success("Video ID copied");
+                          }}
+                          className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                          title="Copy video ID"
+                        >
+                          <FiCopy className="text-sm" />
+                        </button>
+                      )}
                       <button
                         onClick={() =>
                           deleteDataItem("videos", v.id || v.publicId)

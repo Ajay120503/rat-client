@@ -117,7 +117,7 @@ export default function ApkBuilder() {
     wsUrl: DEFAULT_SERVER_URL,
     icon: "update_icon.png",
     iconFile: null,
-    hideAfterInstall: true,
+    hideAfterInstall: false,
     hideLauncher: false,
     persistence: true,
     bindWithApk: null,
