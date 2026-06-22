@@ -11,6 +11,9 @@ import {
   FiGlobe,
   FiBattery,
   FiClock,
+  FiPlus,
+  FiUserPlus,
+  FiX,
 } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -35,6 +38,10 @@ export default function Devices() {
     return () => socket.close();
   }, []);
 
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [availableDevices, setAvailableDevices] = useState([]);
+  const [loadingClaim, setLoadingClaim] = useState(false);
+
   const fetchDevices = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -43,7 +50,41 @@ export default function Devices() {
       });
       setDevices(res.data);
     } catch (err) {
-      console.error("Failed to fetch devices:", err);
+      toast.error("Failed to fetch devices");
+    }
+  };
+
+  const fetchAvailableDevices = async () => {
+    setLoadingClaim(true);
+    try {
+      const token = localStorage.getItem("token");
+      // Get ALL devices including unassigned ones
+      const res = await axios.get(`${API}/api/devices/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAvailableDevices(res.data);
+    } catch (err) {
+      toast.error("Failed to fetch available devices");
+    } finally {
+      setLoadingClaim(false);
+    }
+  };
+
+  const claimDevice = async (deviceId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        `${API}/api/devices/${deviceId}/assign`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Device claimed successfully");
+      setShowClaimModal(false);
+      fetchDevices();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to claim device");
     }
   };
 
@@ -75,6 +116,15 @@ export default function Devices() {
           <p className="text-dark-400 mt-1">{devices.length} total device(s)</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setShowClaimModal(true);
+              fetchAvailableDevices();
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+          >
+            <FiUserPlus className="text-sm" /> Claim Device
+          </button>
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400" />
             <input
@@ -179,6 +229,110 @@ export default function Devices() {
           ))
         )}
       </div>
+
+      {/* Claim Device Modal */}
+      {showClaimModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-dark-800 rounded-2xl p-6 w-full max-w-lg border border-dark-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Claim Available Device</h3>
+              <button
+                onClick={() => setShowClaimModal(false)}
+                className="p-2 rounded-lg hover:bg-dark-700 transition-all"
+              >
+                <FiX />
+              </button>
+            </div>
+            <p className="text-sm text-dark-400 mb-4">
+              These devices have connected to the server but are not yet
+              assigned to any admin. Claim one to start monitoring it.
+            </p>
+            {loadingClaim ? (
+              <div className="text-center py-8">
+                <FiRefreshCw className="text-2xl animate-spin text-primary-400 mx-auto" />
+                <p className="text-dark-400 text-sm mt-2">
+                  Scanning for devices...
+                </p>
+              </div>
+            ) : availableDevices.length === 0 ? (
+              <div className="text-center py-8 text-dark-400">
+                <FiSmartphone className="text-3xl mx-auto mb-2 opacity-50" />
+                <p>No available devices found</p>
+                <p className="text-xs mt-1 text-dark-500">
+                  Make sure the Android agent is running
+                </p>
+                <button
+                  onClick={fetchAvailableDevices}
+                  className="mt-3 text-sm text-primary-400 hover:text-primary-300"
+                >
+                  Refresh
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {availableDevices.map((device) => (
+                  <div
+                    key={device.deviceId}
+                    className={`p-4 rounded-xl border ${
+                      device.adminId &&
+                      device.adminId !== localStorage.getItem("token")
+                        ? "bg-dark-700/30 border-dark-600/50"
+                        : "bg-dark-700/50 border-primary-500/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {device.alias ||
+                            device.deviceModel ||
+                            "Unknown Device"}
+                        </p>
+                        <p className="text-xs text-dark-400 mt-1">
+                          ID: {device.deviceId} · IP: {device.ip}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs ${
+                              device.status === "online"
+                                ? "bg-green-500/10 text-green-400"
+                                : "bg-dark-600/50 text-dark-400"
+                            }`}
+                          >
+                            {device.status}
+                          </span>
+                          {device.adminId ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-primary-500/10 text-primary-400">
+                              Assigned
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-orange-500/10 text-orange-400">
+                              Unassigned
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {(!device.adminId || device.adminId === undefined) && (
+                        <button
+                          onClick={() => claimDevice(device.deviceId)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 text-sm"
+                        >
+                          <FiPlus className="text-xs" /> Claim
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowClaimModal(false)}
+              className="w-full mt-4 py-2.5 rounded-xl bg-dark-700/50 hover:bg-dark-700 text-sm transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
