@@ -146,7 +146,7 @@ export default function Devices() {
     if (isShared) {
       return (
         <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20">
-          Shared
+          Approved
         </span>
       );
     }
