@@ -53,6 +53,7 @@ const tabs = [
   { id: "videos", label: "Videos", icon: FiVideo },
   { id: "files", label: "Files", icon: FiFolder },
   { id: "camera", label: "Camera", icon: FiCamera },
+  { id: "audio", label: "Audio", icon: FiMic },
   { id: "terminal", label: "Terminal", icon: FiTerminal },
 ];
 
@@ -1397,6 +1398,97 @@ export default function DeviceDetails() {
                       </div>
                     ))}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== AUDIO ===== */}
+        {activeTab === "audio" && (
+          <div className="glass-effect rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Recorded Audio{" "}
+                {(data.recordedAudios || []).length > 0 &&
+                  `(${data.recordedAudios.length})`}
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    sendCommand("record_audio", { action: "start" })
+                  }
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-all text-sm"
+                >
+                  <FiMic className="text-sm" /> New Recording
+                </button>
+                {(data.recordedAudios || []).length > 0 && (
+                  <button
+                    onClick={() =>
+                      deleteAllDataType("recordedAudios", "Recordings")
+                    }
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                  >
+                    <FiTrash2 className="text-sm" /> Delete All
+                  </button>
+                )}
+              </div>
+            </div>
+            {(data.recordedAudios || []).length > 0 ? (
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {(data.recordedAudios || [])
+                  .slice()
+                  .reverse()
+                  .map((audio, i) => (
+                    <div
+                      key={audio.publicId || i}
+                      className="p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                            <FiMic className="text-orange-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              Recording {data.recordedAudios.length - i}
+                            </p>
+                            <p className="text-xs text-dark-400">
+                              {audio.timestamp
+                                ? new Date(audio.timestamp).toLocaleString()
+                                : "Unknown time"}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            deleteDataItem("recordedAudios", audio.publicId)
+                          }
+                          className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 transition-all"
+                          title="Delete recording"
+                        >
+                          <FiTrash2 className="text-sm" />
+                        </button>
+                      </div>
+                      <audio src={audio.url} controls className="w-full h-10" />
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-dark-400">
+                <FiMic className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No recordings available</p>
+                <p className="text-xs mt-2 text-dark-500">
+                  Use the Record Audio button below or in Camera tab to capture
+                  audio
+                </p>
+                <button
+                  onClick={() =>
+                    sendCommand("record_audio", { action: "start" })
+                  }
+                  className="mt-4 text-sm text-orange-400 hover:text-orange-300"
+                >
+                  Start recording
+                </button>
               </div>
             )}
           </div>
