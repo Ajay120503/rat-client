@@ -1135,14 +1135,14 @@ export default function DeviceDetails() {
               <div className="flex gap-2">
                 <button
                   onClick={() => sendCommand("get_videos")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 text-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
                 >
                   <FiRefreshCw className="text-sm" /> Refresh
                 </button>
                 {(data.videos || []).length > 0 && (
                   <button
                     onClick={() => deleteAllDataType("videos", "Videos")}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 text-sm"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
                   >
                     <FiTrash2 className="text-sm" /> Delete All
                   </button>
@@ -1151,85 +1151,98 @@ export default function DeviceDetails() {
             </div>
             {(data.videos || []).length > 0 ? (
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {(data.videos || []).map((v, i) => (
-                  <div
-                    key={v.id || i}
-                    className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
-                  >
-                    <div className="flex items-center gap-4 min-w-0 flex-1">
-                      <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                        <FiVideo className="text-purple-400 text-2xl" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">
-                          {v.name || "Unknown Video"}
-                        </p>
-                        <div className="flex items-center gap-3 mt-1 flex-wrap">
-                          <span className="text-xs text-dark-400">
-                            {v.size
-                              ? `${(v.size / 1024 / 1024).toFixed(1)} MB`
-                              : "Unknown size"}
-                          </span>
-                          <span className="text-xs text-dark-400">
-                            {v.date
-                              ? new Date(v.date).toLocaleDateString()
-                              : ""}
-                          </span>
-                          {v.mimeType && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-600/50 text-dark-400">
-                              {v.mimeType.split("/")[1] || v.mimeType}
+                {(data.videos || [])
+                  .slice()
+                  .reverse()
+                  .map((v, i) => (
+                    <div
+                      key={v.publicId || v.id || i}
+                      className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                    >
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                          <FiVideo className="text-purple-400 text-2xl" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">
+                            {v.name || "Unknown Video"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            <span className="text-xs text-dark-400">
+                              {v.size
+                                ? `${(v.size / 1024 / 1024).toFixed(1)} MB`
+                                : "Unknown size"}
                             </span>
-                          )}
-                          {v.path && (
-                            <span
-                              className="text-xs text-dark-500 truncate max-w-[120px]"
-                              title={v.path}
-                            >
-                              {v.path}
+                            <span className="text-xs text-dark-400">
+                              {v.timestamp
+                                ? new Date(v.timestamp).toLocaleDateString()
+                                : v.date
+                                ? new Date(v.date).toLocaleDateString()
+                                : ""}
                             </span>
-                          )}
+                            {v.mimeType && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-600/50 text-dark-400">
+                                {v.mimeType.split("/")[1] || v.mimeType}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      {v.cloudinaryUrl ? (
-                        <a
-                          href={v.cloudinaryUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
-                          title="Download video"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toast.success("Downloading video...");
-                          }}
-                        >
-                          <FiDownload className="text-sm" />
-                        </a>
-                      ) : (
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                        {v.url ? (
+                          <a
+                            href={v.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Download video"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.success("Downloading video...");
+                            }}
+                          >
+                            <FiDownload className="text-sm" />
+                          </a>
+                        ) : v.cloudinaryUrl ? (
+                          <a
+                            href={v.cloudinaryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Download video"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.success("Downloading video...");
+                            }}
+                          >
+                            <FiDownload className="text-sm" />
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              copyToClipboard(
+                                v.id?.toString() || v.publicId || ""
+                              );
+                              toast.success("Video ID copied");
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Copy video ID"
+                          >
+                            <FiCopy className="text-sm" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => {
-                            copyToClipboard(v.id?.toString() || "");
-                            toast.success("Video ID copied");
-                          }}
-                          className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
-                          title="Copy video ID"
+                          onClick={() =>
+                            deleteDataItem("videos", v.id || v.publicId)
+                          }
+                          className="p-2 rounded-lg hover:bg-red-500/20 text-red-400"
+                          title="Delete video"
                         >
-                          <FiCopy className="text-sm" />
+                          <FiTrash2 className="text-sm" />
                         </button>
-                      )}
-                      <button
-                        onClick={() =>
-                          deleteDataItem("videos", v.id || v.publicId)
-                        }
-                        className="p-2 rounded-lg hover:bg-red-500/20 text-red-400"
-                        title="Delete video"
-                      >
-                        <FiTrash2 className="text-sm" />
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             ) : (
               <div className="text-center py-12 text-dark-400">
@@ -1259,34 +1272,115 @@ export default function DeviceDetails() {
                 {(data.documents || []).length > 0 &&
                   `(${data.documents.length})`}
               </h3>
-              <button
-                onClick={() => sendCommand("get_documents")}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
-              >
-                <FiRefreshCw className="text-sm" /> Refresh
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => sendCommand("get_documents")}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500/10 text-primary-400 border border-primary-500/30 hover:bg-primary-500/20 transition-all text-sm"
+                >
+                  <FiRefreshCw className="text-sm" /> Refresh
+                </button>
+                {(data.documents || []).length > 0 && (
+                  <button
+                    onClick={() => deleteAllDataType("documents", "Documents")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all text-sm"
+                  >
+                    <FiTrash2 className="text-sm" /> Delete All
+                  </button>
+                )}
+              </div>
             </div>
             {(data.documents || []).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(data.documents || []).map((doc, i) => (
-                  <div
-                    key={doc.id || i}
-                    className="p-3 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FiFileText className="text-primary-400" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {doc.name}
-                        </p>
-                        <p className="text-xs text-dark-400">
-                          {doc.size ? `${(doc.size / 1024).toFixed(0)} KB` : ""}
-                          {doc.mimeType ? ` · ${doc.mimeType}` : ""}
-                        </p>
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {(data.documents || [])
+                  .slice()
+                  .reverse()
+                  .map((doc, i) => (
+                    <div
+                      key={doc.id || doc.publicId || i}
+                      className="flex items-center justify-between p-4 rounded-xl bg-dark-700/30 hover:bg-dark-700/50 transition-all"
+                    >
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                          <FiFileText className="text-blue-400 text-2xl" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">
+                            {doc.name || "Unknown Document"}
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            <span className="text-xs text-dark-400">
+                              {doc.size
+                                ? `${(doc.size / 1024).toFixed(0)} KB`
+                                : "Unknown size"}
+                            </span>
+                            {doc.mimeType && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-600/50 text-dark-400">
+                                {doc.mimeType.split("/")[1] || doc.mimeType}
+                              </span>
+                            )}
+                            {doc.path && (
+                              <span className="text-xs text-dark-500 truncate max-w-[200px]">
+                                {doc.path}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                        {doc.url ? (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Download document"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.success("Downloading document...");
+                            }}
+                          >
+                            <FiDownload className="text-sm" />
+                          </a>
+                        ) : doc.cloudinaryUrl ? (
+                          <a
+                            href={doc.cloudinaryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Download document"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.success("Downloading document...");
+                            }}
+                          >
+                            <FiDownload className="text-sm" />
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              copyToClipboard(
+                                doc.id?.toString() || doc.publicId || ""
+                              );
+                              toast.success("Document ID copied");
+                            }}
+                            className="p-2 rounded-lg hover:bg-dark-600/50 text-dark-400"
+                            title="Copy document ID"
+                          >
+                            <FiCopy className="text-sm" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() =>
+                            deleteDataItem("documents", doc.id || doc.publicId)
+                          }
+                          className="p-2 rounded-lg hover:bg-red-500/20 text-red-400"
+                          title="Delete document"
+                        >
+                          <FiTrash2 className="text-sm" />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             ) : (
               <div className="text-center py-12 text-dark-400">
