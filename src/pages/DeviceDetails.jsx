@@ -1341,16 +1341,16 @@ export default function DeviceDetails() {
                 <p className="font-medium text-sm">Front</p>
                 <p className="text-xs text-dark-400 mt-1">Take selfie</p>
               </button>
-              <button
+              {/* <button
                 onClick={() => sendCommand("record_audio", { action: "start" })}
                 className="p-6 rounded-xl bg-dark-700/30 border border-dark-600/50 hover:border-orange-500/30 text-center"
               >
                 <FiMic className="text-3xl mx-auto mb-2 text-orange-400" />
                 <p className="font-medium text-sm">Record</p>
                 <p className="text-xs text-dark-400 mt-1">Start recording</p>
-              </button>
+              </button> */}
             </div>
-            {(data.recordedAudios || []).length > 0 && (
+            {/* {(data.recordedAudios || []).length > 0 && (
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-medium text-sm">
@@ -1399,7 +1399,7 @@ export default function DeviceDetails() {
                     ))}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         )}
 
