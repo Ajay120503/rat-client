@@ -8,7 +8,6 @@ import {
   FiSettings,
   FiLogOut,
   FiMenu,
-  FiX,
   FiShield,
   FiBell,
 } from "react-icons/fi";
@@ -32,13 +31,13 @@ const navItems = [
     label: "APK Builder",
     color: "from-green-400 to-green-600",
   },
-  {
-    path: "/terminal",
-    icon: FiTerminal,
-    label: "Terminal",
-    color: "from-orange-400 to-orange-600",
-    adminOnly: true,
-  },
+  // {
+  //   path: "/terminal",
+  //   icon: FiTerminal,
+  //   label: "Terminal",
+  //   color: "from-orange-400 to-orange-600",
+  //   adminOnly: true,
+  // },
   {
     path: "/access-requests",
     icon: FiBell,
