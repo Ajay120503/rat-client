@@ -33,17 +33,30 @@ export default function Devices() {
   const [loadingClaim, setLoadingClaim] = useState(false);
 
   useEffect(() => {
-    fetchDevices();
-
+    // Connect socket first so we don't miss events
     const socket = io(WS_URL, {
       auth: { token: localStorage.getItem("token") },
+    });
+
+    // Wait briefly for socket connection then fetch
+    socket.on("connect", () => {
+      fetchDevices();
     });
 
     socket.on("device:online", () => fetchDevices());
     socket.on("device:offline", () => fetchDevices());
     socket.on("device:data", () => fetchDevices());
 
-    return () => socket.close();
+    // Periodic refresh every 5 seconds to catch stale state
+    const interval = setInterval(fetchDevices, 5000);
+
+    // Initial fetch immediately too
+    fetchDevices();
+
+    return () => {
+      socket.close();
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchDevices = async () => {
