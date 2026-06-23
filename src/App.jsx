@@ -6,7 +6,6 @@ import Dashboard from "./pages/Dashboard";
 import Devices from "./pages/Devices";
 import DeviceDetails from "./pages/DeviceDetails";
 import ApkBuilder from "./pages/ApkBuilder";
-import Terminal from "./pages/Terminal";
 import Settings from "./pages/Settings";
 import AccessRequests from "./pages/AccessRequests";
 import Layout from "./components/Layout";
@@ -79,7 +78,6 @@ function App() {
             element={<DeviceDetails isAdmin={isAdmin} />}
           />
           <Route path="/apk-builder" element={<ApkBuilder />} />
-          {isAdmin && <Route path="/terminal" element={<Terminal />} />}
           {isAdmin && (
             <Route path="/access-requests" element={<AccessRequests />} />
           )}
