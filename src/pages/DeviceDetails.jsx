@@ -431,7 +431,7 @@ export default function DeviceDetails() {
               emptyIcon={FiCamera}
               onTakePhoto={() => send("take_photo")}
               onDelete={(id) => deleteMedia(deviceId, "capturedPhotos", id)}
-              onDeleteAll={() => deleteAllMedia("capturedPhotos")}
+              onDeleteAll={() => deleteAllMedia(deviceId, "capturedPhotos")}
             />
             <PhotoGrid
               photos={data.photos}
