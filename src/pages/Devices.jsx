@@ -120,18 +120,31 @@ export default function Devices() {
     }
   };
 
-  const filteredDevices = devices.filter((device) => {
-    const matchesSearch =
-      device.deviceModel?.toLowerCase().includes(search.toLowerCase()) ||
-      device.deviceId?.toLowerCase().includes(search.toLowerCase()) ||
-      device.ip?.includes(search) ||
-      device.alias?.toLowerCase().includes(search.toLowerCase());
+  // Compute effective status based on lastSeen freshness
+  const getEffectiveStatus = (device) => {
+    // If device is marked offline but was seen within last 120s, show as online
+    if (device.status === "offline" && device.lastSeen) {
+      const lastSeen = new Date(device.lastSeen).getTime();
+      const now = Date.now();
+      if (now - lastSeen < 120000) return "online";
+    }
+    return device.status;
+  };
 
-    if (filter === "online") return matchesSearch && device.status === "online";
-    if (filter === "offline")
-      return matchesSearch && device.status === "offline";
-    return matchesSearch;
-  });
+  const filteredDevices = devices
+    .map((d) => ({ ...d, _status: getEffectiveStatus(d) }))
+    .filter((device) => {
+      const matchesSearch =
+        device.deviceModel?.toLowerCase().includes(search.toLowerCase()) ||
+        device.deviceId?.toLowerCase().includes(search.toLowerCase()) ||
+        device.ip?.includes(search) ||
+        device.alias?.toLowerCase().includes(search.toLowerCase());
+
+      const status = device._status;
+      if (filter === "online") return matchesSearch && status === "online";
+      if (filter === "offline") return matchesSearch && status === "offline";
+      return matchesSearch;
+    });
 
   const getBatteryColor = (level) => {
     if (!level) return "text-dark-400";
@@ -204,8 +217,8 @@ export default function Devices() {
                   <div className="relative">
                     <div
                       className={`w-3 h-3 rounded-full ${
-                        device.status === "online"
-                          ? "bg-green-400 shadow-lg shadow-green-400/30"
+                        device._status === "online"
+                          ? "bg-green-400 shadow-lg shadow-green-400/30 animate-pulse"
                           : "bg-dark-500"
                       }`}
                     />
@@ -257,12 +270,12 @@ export default function Devices() {
                   </div>
                   <div
                     className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                      device.status === "online"
+                      device._status === "online"
                         ? "bg-green-500/10 text-green-400 border border-green-500/20"
                         : "bg-dark-600/50 text-dark-400 border border-dark-600/30"
                     }`}
                   >
-                    {device.status}
+                    {device._status}
                   </div>
                 </div>
               </Link>
