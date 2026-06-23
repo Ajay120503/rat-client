@@ -33,6 +33,7 @@ export async function deleteDevice(deviceId) {
 }
 
 export async function deleteMedia(deviceId, type, publicId) {
+  if (!publicId) { toast.error("No publicId to delete"); return false; }
   try {
     await axios.delete(`${API}/api/media/${deviceId}/${type}`, {
       ...headers(),
@@ -66,8 +67,9 @@ export async function deleteDataType(deviceId, dataType, label) {
 }
 
 export async function deleteDataItem(deviceId, dataType, itemId) {
+  if (!itemId) { toast.error("No item ID to delete"); return false; }
   try {
-    await axios.delete(`${API}/api/devices/${deviceId}/data/${dataType}/${itemId}`, headers());
+    await axios.delete(`${API}/api/devices/${deviceId}/data/${dataType}/${encodeURIComponent(itemId)}`, headers());
     toast.success("Item deleted");
     return true;
   } catch (err) {
