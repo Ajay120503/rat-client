@@ -102,6 +102,18 @@ const quickActions = [
     icon: FiDownload,
     color: "pink",
   },
+  {
+    id: "download_file",
+    label: "Download File",
+    icon: FiDownload,
+    color: "green",
+  },
+  {
+    id: "enable_notification_listener",
+    label: "Enable Notif Access",
+    icon: FiBell,
+    color: "yellow",
+  },
 ];
 
 export default function DeviceDetails() {
@@ -129,8 +141,34 @@ export default function DeviceDetails() {
     fetchDevice();
     const s = io(WS_URL, {
       auth: { token: localStorage.getItem("token") },
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 20000,
     });
     setSocket(s);
+
+    s.on("connect", () => {
+      addTerminalOutput("[System] WebSocket connected");
+    });
+
+    s.on("disconnect", (reason) => {
+      addTerminalOutput(`[System] WebSocket disconnected: ${reason}`);
+    });
+
+    s.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+
+    s.on("command:result", (data) => {
+      if (data.deviceId === deviceId && data.result) {
+        addTerminalOutput(
+          `[Result] ${JSON.stringify(data.result).substring(0, 200)}`
+        );
+        fetchDevice();
+      }
+    });
 
     s.on("device:data", (data) => {
       if (data.deviceId === deviceId) fetchDevice();
@@ -144,8 +182,14 @@ export default function DeviceDetails() {
         toast.success(`Command sent: ${data.type}`);
       }
     });
+    s.on("command:error", (data) => {
+      toast.error(`Command error: ${data.error}`);
+    });
 
-    return () => s.close();
+    return () => {
+      s.close();
+      s.off();
+    };
   }, [deviceId]);
 
   const fetchDevice = async () => {
